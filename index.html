@@ -1,0 +1,2310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>InvoiceNow — Free Invoice Generator for Sydney Businesses</title>
+<meta name="description" content="Create professional GST-compliant tax invoices instantly. Free invoice generator for Sydney freelancers and small businesses. ABN verified, no signup needed.">
+<meta name="keywords" content="invoice generator australia, free tax invoice, GST invoice, ABN invoice, Sydney freelancer invoice, invoice template australia">
+<meta property="og:title" content="InvoiceNow — Free Invoice Generator for Sydney Businesses">
+<meta property="og:description" content="Create GST-compliant tax invoices instantly. Free, no signup needed.">
+<meta property="og:url" content="https://invoicenow.me">
+<link rel="canonical" href="https://invoicenow.me">
+
+<!-- Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+<!-- jsPDF for PDF generation -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<style>
+/* ─── Reset & Variables ─────────────────────────────── */
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --ink: #0c0b0a;
+  --ink2: #4a4845;
+  --ink3: #9a9890;
+  --paper: #fdfcfa;
+  --surface: #f4f2ee;
+  --surface2: #ece9e3;
+  --white: #ffffff;
+  --accent: #1e6b47;
+  --accent-lt: #e8f4ed;
+  --accent-dk: #155235;
+  --accent2: #c8873a;
+  --danger: #c0392b;
+  --border: rgba(0,0,0,0.07);
+  --border2: rgba(0,0,0,0.13);
+  --shadow: 0 2px 20px rgba(0,0,0,0.06);
+  --shadow-lg: 0 8px 40px rgba(0,0,0,0.10);
+  --r: 10px;
+  --r-lg: 16px;
+  --ff: 'Outfit', sans-serif;
+  --ffd: 'Playfair Display', serif;
+  --transition: 0.18s ease;
+}
+
+html { scroll-behavior: smooth; }
+body { font-family: var(--ff); background: var(--paper); color: var(--ink); line-height: 1.6; font-size: 15px; -webkit-font-smoothing: antialiased; }
+
+/* ─── Utility ───────────────────────────────────────── */
+.container { max-width: 1120px; margin: 0 auto; padding: 0 40px; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); }
+
+/* ─── Navigation ────────────────────────────────────── */
+#navbar {
+  position: sticky; top: 0; z-index: 200;
+  background: rgba(253,252,250,0.92);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 0.5px solid var(--border);
+  transition: box-shadow var(--transition);
+}
+#navbar.scrolled { box-shadow: var(--shadow); }
+
+.nav-inner {
+  display: flex; align-items: center; justify-content: space-between;
+  height: 64px;
+}
+.nav-logo { font-family: var(--ffd); font-size: 22px; letter-spacing: -0.3px; color: var(--ink); text-decoration: none; }
+.nav-logo span { color: var(--accent); }
+
+.nav-links { display: flex; align-items: center; gap: 8px; list-style: none; }
+.nav-links a { font-size: 13px; color: var(--ink2); text-decoration: none; padding: 6px 12px; border-radius: 8px; transition: background var(--transition), color var(--transition); }
+.nav-links a:hover { background: var(--surface); color: var(--ink); }
+
+.nav-right { display: flex; align-items: center; gap: 12px; }
+
+.lang-switch {
+  display: flex; background: var(--surface); border: 0.5px solid var(--border2);
+  border-radius: 20px; overflow: hidden; font-size: 12px;
+}
+.lang-switch button {
+  padding: 5px 13px; border: none; background: none; cursor: pointer;
+  font-family: var(--ff); font-size: 12px; color: var(--ink2);
+  transition: background var(--transition), color var(--transition);
+}
+.lang-switch button.active { background: var(--ink); color: #fff; }
+
+.btn-nav {
+  background: var(--ink); color: #fff; border: none;
+  padding: 9px 20px; border-radius: var(--r);
+  font-size: 13px; font-family: var(--ff); font-weight: 500;
+  cursor: pointer; transition: background var(--transition), transform var(--transition);
+  text-decoration: none; display: inline-flex; align-items: center;
+}
+.btn-nav:hover { background: #222; transform: translateY(-1px); }
+.btn-nav:active { transform: translateY(0); }
+
+/* Mobile nav toggle */
+.nav-hamburger { display: none; background: none; border: none; cursor: pointer; padding: 8px; }
+.nav-hamburger span { display: block; width: 20px; height: 1.5px; background: var(--ink); margin: 4px 0; transition: all 0.2s; }
+
+/* ─── Hero ──────────────────────────────────────────── */
+#hero {
+  padding: 80px 0 64px;
+  position: relative; overflow: hidden;
+}
+#hero::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: radial-gradient(ellipse 60% 60% at 70% 50%, rgba(30,107,71,0.04) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.hero-grid {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 64px; align-items: center;
+}
+
+.hero-eyebrow {
+  display: inline-flex; align-items: center; gap: 7px;
+  font-size: 12px; font-weight: 500; color: var(--accent);
+  background: var(--accent-lt); padding: 5px 14px;
+  border-radius: 20px; margin-bottom: 20px; letter-spacing: 0.3px;
+}
+.eyebrow-dot { width: 5px; height: 5px; background: var(--accent); border-radius: 50%; animation: pulse 2s infinite; }
+@keyframes pulse { 0%,100%{opacity:1}50%{opacity:0.4} }
+
+.hero-h1 {
+  font-family: var(--ffd); font-size: 56px; line-height: 1.06;
+  letter-spacing: -1.5px; margin-bottom: 18px; color: var(--ink);
+}
+.hero-h1 em { font-style: italic; color: var(--accent); }
+
+.hero-desc {
+  font-size: 16px; color: var(--ink2); line-height: 1.75;
+  font-weight: 300; margin-bottom: 8px;
+}
+
+.hero-location {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 12px; color: var(--ink3); margin-bottom: 32px;
+}
+.hero-location svg { opacity: 0.45; }
+
+.hero-actions { display: flex; gap: 10px; margin-bottom: 44px; flex-wrap: wrap; }
+
+.btn-primary {
+  background: var(--ink); color: #fff; border: none;
+  padding: 14px 28px; border-radius: var(--r);
+  font-size: 14px; font-family: var(--ff); font-weight: 500;
+  cursor: pointer; transition: background var(--transition), transform var(--transition), box-shadow var(--transition);
+  text-decoration: none; display: inline-flex; align-items: center; gap: 6px;
+}
+.btn-primary:hover { background: #1a1916; transform: translateY(-1px); box-shadow: 0 4px 16px rgba(0,0,0,0.15); }
+.btn-primary:active { transform: translateY(0); }
+
+.btn-ghost {
+  background: transparent; color: var(--ink);
+  border: 0.5px solid var(--border2);
+  padding: 14px 22px; border-radius: var(--r);
+  font-size: 14px; font-family: var(--ff); cursor: pointer;
+  transition: background var(--transition), border-color var(--transition);
+  text-decoration: none; display: inline-flex; align-items: center;
+}
+.btn-ghost:hover { background: var(--surface); border-color: var(--border2); }
+
+.hero-trust {
+  display: flex; gap: 32px;
+  padding-top: 32px; border-top: 0.5px solid var(--border);
+}
+.trust-item .num { font-family: var(--ffd); font-size: 27px; color: var(--ink); line-height: 1.1; }
+.trust-item .lbl { font-size: 11px; color: var(--ink3); }
+
+/* Invoice preview card */
+.preview-shell {
+  background: var(--white); border: 0.5px solid var(--border2);
+  border-radius: 20px; overflow: hidden;
+  box-shadow: var(--shadow-lg);
+  animation: float 6s ease-in-out infinite;
+}
+@keyframes float { 0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)} }
+
+.browser-bar {
+  background: var(--surface); padding: 11px 16px;
+  display: flex; align-items: center; gap: 8px;
+  border-bottom: 0.5px solid var(--border);
+}
+.bdot { width: 10px; height: 10px; border-radius: 50%; }
+.bdot-r { background: #ff5f57; } .bdot-y { background: #febc2e; } .bdot-g { background: #28c840; }
+.burl { flex: 1; text-align: center; font-size: 11px; color: var(--ink3); background: rgba(0,0,0,0.04); padding: 3px 12px; border-radius: 6px; }
+
+.inv-card { padding: 28px 32px; }
+.inv-card-head { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; }
+.inv-brand { font-family: var(--ffd); font-size: 19px; color: var(--ink); }
+.inv-brand-sub { font-size: 10px; color: var(--ink3); margin-top: 2px; }
+.inv-num-block { text-align: right; }
+.inv-num-label { font-size: 9px; text-transform: uppercase; letter-spacing: 1.2px; color: var(--ink3); }
+.inv-num-val { font-size: 15px; font-weight: 600; color: var(--ink); }
+.inv-num-date { font-size: 10px; color: var(--ink3); }
+.inv-parties { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 18px; }
+.party-lbl { font-size: 9px; text-transform: uppercase; letter-spacing: 1px; color: var(--ink3); margin-bottom: 2px; }
+.party-name { font-size: 12px; font-weight: 500; }
+.party-sub { font-size: 10px; color: var(--ink2); }
+.inv-table-mini { width: 100%; border-collapse: collapse; font-size: 11px; margin-bottom: 14px; }
+.inv-table-mini th { font-size: 9px; text-transform: uppercase; letter-spacing: 1px; color: var(--ink3); padding: 5px 0; border-bottom: 0.5px solid var(--border2); text-align: left; }
+.inv-table-mini th:last-child, .inv-table-mini td:last-child { text-align: right; }
+.inv-table-mini td { padding: 6px 0; color: var(--ink2); border-bottom: 0.5px solid var(--border); }
+.inv-totals-mini { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; }
+.inv-tot-row { display: flex; gap: 36px; font-size: 11px; color: var(--ink2); }
+.inv-tot-row.final { font-weight: 600; font-size: 13px; color: var(--ink); padding-top: 6px; margin-top: 2px; border-top: 0.5px solid var(--border2); }
+.gst-note { font-size: 9px; color: var(--ink3); margin-top: 10px; padding-top: 8px; border-top: 0.5px solid var(--border); }
+.inv-status-pill { display: inline-flex; align-items: center; gap: 5px; background: var(--accent-lt); color: var(--accent); padding: 3px 10px; border-radius: 20px; font-size: 9px; font-weight: 600; letter-spacing: 0.3px; margin-top: 8px; }
+
+/* ─── Section Shared ─────────────────────────────────── */
+.section-eyebrow {
+  font-size: 11px; text-transform: uppercase; letter-spacing: 2px;
+  color: var(--accent); font-weight: 500; margin-bottom: 10px;
+}
+.section-title {
+  font-family: var(--ffd); font-size: 38px;
+  letter-spacing: -0.5px; line-height: 1.15; margin-bottom: 48px;
+}
+.section-divider { border: none; border-top: 0.5px solid var(--border); }
+
+/* ─── Features ──────────────────────────────────────── */
+#features { padding: 80px 0; }
+.features-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+.feat-card {
+  background: var(--white); border: 0.5px solid var(--border);
+  border-radius: 14px; padding: 26px;
+  transition: border-color var(--transition), box-shadow var(--transition), transform var(--transition);
+}
+.feat-card:hover { border-color: var(--border2); box-shadow: var(--shadow); transform: translateY(-2px); }
+.feat-icon {
+  width: 38px; height: 38px; background: var(--accent-lt);
+  border-radius: 10px; display: flex; align-items: center; justify-content: center;
+  margin-bottom: 15px;
+}
+.feat-title { font-size: 14px; font-weight: 500; margin-bottom: 7px; }
+.feat-desc { font-size: 13px; color: var(--ink2); line-height: 1.65; }
+
+/* ─── Generator Section ─────────────────────────────── */
+#generator { background: var(--surface); padding: 80px 0; }
+
+.gen-controls {
+  display: flex; align-items: center; gap: 8px;
+  flex-wrap: wrap; margin-bottom: 28px;
+}
+.gen-control-label { font-size: 12px; color: var(--ink3); }
+
+select.control-select {
+  padding: 7px 11px; border: 0.5px solid var(--border2);
+  border-radius: 8px; font-family: var(--ff); font-size: 13px;
+  color: var(--ink); background: var(--white); cursor: pointer; outline: none;
+}
+select.control-select:focus { border-color: var(--accent); }
+
+.gen-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; align-items: start; }
+
+/* Form Panel */
+.form-panel {
+  background: var(--white); border: 0.5px solid var(--border);
+  border-radius: var(--r-lg); padding: 28px;
+}
+.form-section-title {
+  font-size: 13px; font-weight: 500; color: var(--ink);
+  padding-bottom: 14px; margin-bottom: 18px;
+  border-bottom: 0.5px solid var(--border);
+}
+.field { margin-bottom: 14px; }
+.field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.field label {
+  display: block; font-size: 10px; font-weight: 500;
+  text-transform: uppercase; letter-spacing: 0.8px;
+  color: var(--ink3); margin-bottom: 5px;
+}
+.field input, .field select, .field textarea {
+  width: 100%; padding: 9px 12px;
+  border: 0.5px solid var(--border2); border-radius: 8px;
+  font-family: var(--ff); font-size: 13px; color: var(--ink);
+  background: var(--white); outline: none;
+  transition: border-color var(--transition);
+}
+.field input:focus, .field select:focus, .field textarea:focus { border-color: var(--accent); }
+.field input::placeholder, .field textarea::placeholder { color: var(--ink3); }
+.field textarea { resize: none; min-height: 56px; }
+
+/* ABN verification UI */
+.abn-wrap { position: relative; }
+.abn-wrap input { padding-right: 90px; }
+.abn-status {
+  position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+  font-size: 10px; font-weight: 500; padding: 2px 8px; border-radius: 20px;
+  display: none;
+}
+.abn-status.checking { display: block; color: var(--ink3); background: var(--surface); }
+.abn-status.valid { display: block; color: var(--accent); background: var(--accent-lt); }
+.abn-status.invalid { display: block; color: var(--danger); background: #fbeaea; }
+.abn-lookup-result {
+  font-size: 11px; color: var(--accent); margin-top: 4px; display: none; padding: 6px 10px;
+  background: var(--accent-lt); border-radius: 6px;
+}
+
+/* Line items */
+.items-section { margin-top: 20px; padding-top: 18px; border-top: 0.5px solid var(--border); }
+.items-section-title {
+  font-size: 10px; font-weight: 500; text-transform: uppercase;
+  letter-spacing: 0.8px; color: var(--ink3); margin-bottom: 10px;
+}
+.items-cols { display: grid; grid-template-columns: 2fr 0.7fr 1fr auto; gap: 8px; margin-bottom: 5px; }
+.items-cols span { font-size: 9px; text-transform: uppercase; letter-spacing: 0.8px; color: var(--ink3); font-weight: 500; }
+.item-row { display: grid; grid-template-columns: 2fr 0.7fr 1fr auto; gap: 8px; margin-bottom: 8px; align-items: center; }
+.item-row input { font-size: 13px; }
+.rm-item {
+  background: none; border: none; color: var(--ink3);
+  cursor: pointer; font-size: 18px; padding: 6px; line-height: 1;
+  border-radius: 6px; transition: color var(--transition), background var(--transition);
+}
+.rm-item:hover { color: var(--danger); background: #fbeaea; }
+.add-item-btn {
+  width: 100%; background: none; border: 0.5px dashed var(--border2);
+  padding: 9px; border-radius: 8px; font-size: 12px; color: var(--ink3);
+  cursor: pointer; font-family: var(--ff);
+  transition: border-color var(--transition), color var(--transition), background var(--transition);
+}
+.add-item-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-lt); }
+
+/* Totals */
+.totals-section { padding-top: 14px; margin-top: 14px; border-top: 0.5px solid var(--border); }
+.total-row { display: flex; justify-content: space-between; font-size: 13px; color: var(--ink2); padding: 3px 0; }
+.total-row.grand { font-size: 16px; font-weight: 600; color: var(--ink); padding-top: 8px; margin-top: 4px; border-top: 0.5px solid var(--border2); }
+
+/* Download button */
+.dl-btn {
+  width: 100%; background: var(--accent); color: #fff; border: none;
+  padding: 14px; border-radius: var(--r); font-size: 14px; font-weight: 500;
+  cursor: pointer; font-family: var(--ff); margin-top: 16px;
+  transition: background var(--transition), transform var(--transition), box-shadow var(--transition);
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+}
+.dl-btn:hover { background: var(--accent-dk); transform: translateY(-1px); box-shadow: 0 4px 16px rgba(30,107,71,0.25); }
+.dl-btn:active { transform: translateY(0); }
+.dl-btn.loading { opacity: 0.75; pointer-events: none; }
+.gst-compliance { font-size: 11px; color: var(--ink3); text-align: center; margin-top: 8px; }
+
+/* Preview Panel */
+.preview-panel { position: sticky; top: 80px; }
+.preview-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.preview-label { font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--ink3); }
+.preview-live-badge { font-size: 10px; background: var(--accent-lt); color: var(--accent); padding: 2px 8px; border-radius: 20px; font-weight: 500; }
+
+.invoice-doc {
+  background: var(--white); border: 0.5px solid var(--border);
+  border-radius: var(--r-lg); padding: 36px;
+  box-shadow: var(--shadow);
+}
+.doc-head { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; }
+.doc-brand { font-family: var(--ffd); font-size: 22px; color: var(--ink); }
+.doc-brand-sub { font-size: 11px; color: var(--ink3); margin-top: 2px; }
+.doc-num-block { text-align: right; }
+.doc-num-label { font-size: 9px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--ink3); }
+.doc-num-val { font-size: 18px; font-weight: 500; }
+.doc-num-date { font-size: 11px; color: var(--ink3); }
+.doc-parties { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-bottom: 22px; }
+.dp-lbl { font-size: 9px; text-transform: uppercase; letter-spacing: 1px; color: var(--ink3); margin-bottom: 4px; }
+.dp-name { font-size: 13px; font-weight: 500; }
+.dp-sub { font-size: 11px; color: var(--ink2); margin-top: 2px; }
+.doc-table { width: 100%; border-collapse: collapse; margin-bottom: 18px; }
+.doc-table th { font-size: 9px; text-transform: uppercase; letter-spacing: 1px; color: var(--ink3); padding: 7px 0; border-bottom: 0.5px solid var(--border2); text-align: left; }
+.doc-table th:last-child, .doc-table td:last-child { text-align: right; }
+.doc-table td { padding: 8px 0; font-size: 12px; color: var(--ink2); border-bottom: 0.5px solid var(--border); }
+.doc-totals { display: flex; flex-direction: column; align-items: flex-end; gap: 5px; }
+.dt-row { display: flex; gap: 48px; font-size: 12px; color: var(--ink2); }
+.dt-row.grand { font-weight: 600; font-size: 14px; color: var(--ink); padding-top: 8px; border-top: 0.5px solid var(--border2); margin-top: 4px; }
+.doc-footer { margin-top: 20px; padding-top: 14px; border-top: 0.5px solid var(--border); }
+.doc-notes { font-size: 11px; color: var(--ink2); margin-bottom: 4px; }
+.doc-bank { font-size: 11px; color: var(--ink2); margin-bottom: 6px; white-space: pre-line; padding: 8px 10px; background: var(--surface); border-radius: 6px; border-left: 2.5px solid var(--accent); }
+.doc-bank-label { font-size: 9px; text-transform: uppercase; letter-spacing: 1px; color: var(--accent); font-weight: 500; margin-bottom: 3px; }
+.doc-abn { font-size: 10px; color: var(--ink3); }
+.dp-clientabn { font-size: 10px; color: var(--ink3); margin-top: 1px; }
+
+/* ─── Pricing ────────────────────────────────────────── */
+#pricing { padding: 80px 0; }
+.pricing-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin-top: 48px; }
+.price-card {
+  background: var(--white); border: 0.5px solid var(--border);
+  border-radius: var(--r-lg); padding: 30px;
+  transition: box-shadow var(--transition), transform var(--transition);
+}
+.price-card:hover { box-shadow: var(--shadow); transform: translateY(-2px); }
+.price-card.featured { border: 1.5px solid var(--ink); position: relative; }
+.featured-badge {
+  position: absolute; top: -12px; left: 50%; transform: translateX(-50%);
+  background: var(--ink); color: #fff; font-size: 11px;
+  padding: 3px 16px; border-radius: 20px; font-weight: 500; white-space: nowrap;
+}
+.plan-name { font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--ink3); margin-bottom: 6px; }
+.plan-price { font-family: var(--ffd); font-size: 40px; letter-spacing: -1px; line-height: 1; }
+.plan-price sup { font-size: 16px; font-family: var(--ff); vertical-align: super; }
+.plan-period { font-size: 11px; color: var(--ink3); margin-bottom: 22px; margin-top: 4px; }
+.plan-features { list-style: none; margin-bottom: 24px; }
+.plan-features li { font-size: 13px; color: var(--ink2); padding: 5px 0; border-bottom: 0.5px solid var(--border); display: flex; align-items: center; gap: 9px; }
+.feature-check { width: 15px; height: 15px; border-radius: 50%; flex-shrink: 0; }
+.feature-check.on { background: var(--accent); }
+.feature-check.off { background: var(--surface); border: 0.5px solid var(--border2); }
+.plan-btn {
+  width: 100%; padding: 11px; border-radius: 8px;
+  font-size: 13px; font-family: var(--ff); cursor: pointer; font-weight: 500;
+  transition: all var(--transition);
+}
+.plan-btn-outline { background: var(--white); border: 0.5px solid var(--border2); color: var(--ink); }
+.plan-btn-outline:hover { background: var(--surface); }
+.plan-btn-solid { background: var(--ink); border: none; color: #fff; }
+.plan-btn-solid:hover { background: #222; }
+
+/* ─── FAQ ────────────────────────────────────────────── */
+#faq { background: var(--surface); padding: 80px 0; }
+.faq-list { max-width: 720px; }
+.faq-item { border-bottom: 0.5px solid var(--border2); }
+.faq-q {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 18px 0; cursor: pointer; font-size: 15px; font-weight: 500;
+  transition: color var(--transition); user-select: none;
+}
+.faq-q:hover { color: var(--accent); }
+.faq-icon { font-size: 20px; color: var(--ink3); transition: transform 0.2s; font-weight: 300; flex-shrink: 0; }
+.faq-item.open .faq-icon { transform: rotate(45deg); color: var(--accent); }
+.faq-a { font-size: 14px; color: var(--ink2); line-height: 1.7; padding-bottom: 16px; display: none; }
+.faq-item.open .faq-a { display: block; }
+
+/* ─── Footer ─────────────────────────────────────────── */
+footer {
+  background: var(--ink); color: rgba(255,255,255,0.9);
+  padding: 48px 0 36px;
+}
+.footer-grid { display: grid; grid-template-columns: 1.5fr 1fr 1fr; gap: 40px; margin-bottom: 40px; }
+.footer-brand {}
+.footer-logo { font-family: var(--ffd); font-size: 20px; color: #fff; margin-bottom: 10px; }
+.footer-logo span { color: #6ec99a; }
+.footer-tagline { font-size: 13px; color: rgba(255,255,255,0.5); line-height: 1.6; max-width: 240px; }
+.footer-col-title { font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; color: rgba(255,255,255,0.4); margin-bottom: 14px; }
+.footer-links { list-style: none; }
+.footer-links li { margin-bottom: 8px; }
+.footer-links a { font-size: 13px; color: rgba(255,255,255,0.65); text-decoration: none; transition: color var(--transition); }
+.footer-links a:hover { color: #fff; }
+.footer-bottom { padding-top: 24px; border-top: 0.5px solid rgba(255,255,255,0.1); display: flex; justify-content: space-between; align-items: center; }
+.footer-copy { font-size: 12px; color: rgba(255,255,255,0.35); }
+.footer-compliance { font-size: 11px; color: rgba(255,255,255,0.3); }
+
+/* ─── Template Selector ─────────────────────────────── */
+.template-picker {
+  margin-bottom: 20px;
+}
+.template-picker-label {
+  font-size: 10px; font-weight: 500; text-transform: uppercase;
+  letter-spacing: 0.8px; color: var(--ink3); margin-bottom: 10px; display: block;
+}
+.template-cards {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
+}
+.tpl-card {
+  border: 1.5px solid var(--border2); border-radius: 10px;
+  cursor: pointer; overflow: hidden;
+  transition: border-color var(--transition), box-shadow var(--transition), transform var(--transition);
+  background: var(--white);
+}
+.tpl-card:hover { border-color: var(--ink3); transform: translateY(-1px); box-shadow: var(--shadow); }
+.tpl-card.active { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(30,107,71,0.12); }
+.tpl-thumb {
+  height: 72px; width: 100%; position: relative; overflow: hidden;
+}
+/* Classic thumb */
+.tpl-card[data-tpl="classic"] .tpl-thumb { background: #fff; }
+.tpl-card[data-tpl="classic"] .tpl-thumb::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px;
+  background: #1e6b47;
+}
+.tpl-card[data-tpl="classic"] .tpl-thumb::after {
+  content: '';
+  position: absolute; top: 14px; left: 8px; right: 8px; bottom: 6px;
+  background:
+    linear-gradient(var(--border) 1px, transparent 1px),
+    linear-gradient(90deg, var(--border) 1px, transparent 1px);
+  background-size: 100% 10px, 30px 100%;
+}
+/* Bold thumb */
+.tpl-card[data-tpl="bold"] .tpl-thumb {
+  background: #0f1923;
+}
+.tpl-card[data-tpl="bold"] .tpl-thumb::before {
+  content: ''; position: absolute; top: 0; left: 0; bottom: 0; width: 5px;
+  background: #c8873a;
+}
+.tpl-card[data-tpl="bold"] .tpl-thumb::after {
+  content: '';
+  position: absolute; top: 10px; left: 16px; right: 8px; bottom: 6px;
+  background:
+    linear-gradient(rgba(255,255,255,0.06) 1px, transparent 1px);
+  background-size: 100% 10px;
+}
+/* Minimal thumb */
+.tpl-card[data-tpl="minimal"] .tpl-thumb { background: #ffffff; }
+.tpl-card[data-tpl="minimal"] .tpl-thumb::before {
+  content: ''; position: absolute; bottom: 0; left: 8px; right: 8px; height: 1px;
+  background: #0c0b0a;
+}
+.tpl-card[data-tpl="minimal"] .tpl-thumb::after {
+  content: '';
+  position: absolute; top: 10px; left: 8px; right: 8px; bottom: 10px;
+  background:
+    linear-gradient(rgba(0,0,0,0.06) 1px, transparent 1px);
+  background-size: 100% 11px;
+}
+.tpl-info {
+  padding: 8px 10px 9px; border-top: 0.5px solid var(--border);
+}
+.tpl-name { font-size: 12px; font-weight: 500; color: var(--ink); }
+.tpl-desc { font-size: 10px; color: var(--ink3); margin-top: 1px; }
+.tpl-card.active .tpl-name { color: var(--accent); }
+
+/* ─── Template-specific preview overrides ──────────── */
+
+/* Bold template: dark background */
+.invoice-doc.tpl-bold {
+  background: #0f1923; color: #f0ede8;
+  border-color: rgba(255,255,255,0.08);
+}
+.invoice-doc.tpl-bold .doc-brand { color: #f0ede8; }
+.invoice-doc.tpl-bold .doc-brand-sub,
+.invoice-doc.tpl-bold .doc-num-date { color: rgba(240,237,232,0.45); }
+.invoice-doc.tpl-bold .doc-num-label { color: #c8873a; letter-spacing: 2px; }
+.invoice-doc.tpl-bold .doc-num-val { color: #f0ede8; }
+.invoice-doc.tpl-bold .dp-lbl { color: rgba(240,237,232,0.4); }
+.invoice-doc.tpl-bold .dp-name { color: #f0ede8; }
+.invoice-doc.tpl-bold .dp-sub { color: rgba(240,237,232,0.55); }
+.invoice-doc.tpl-bold .doc-table th {
+  color: rgba(240,237,232,0.45); border-bottom-color: rgba(255,255,255,0.12);
+}
+.invoice-doc.tpl-bold .doc-table td {
+  color: rgba(240,237,232,0.75); border-bottom-color: rgba(255,255,255,0.07);
+}
+.invoice-doc.tpl-bold .dt-row { color: rgba(240,237,232,0.6); }
+.invoice-doc.tpl-bold .dt-row.grand { color: #f0ede8; border-top-color: rgba(255,255,255,0.15); }
+.invoice-doc.tpl-bold .doc-notes,
+.invoice-doc.tpl-bold .doc-abn { color: rgba(240,237,232,0.4); }
+.invoice-doc.tpl-bold .doc-footer { border-top-color: rgba(255,255,255,0.08); }
+.invoice-doc.tpl-bold .doc-head {
+  padding-left: 14px;
+  border-left: 4px solid #c8873a;
+}
+
+/* Minimal template: stark black & white */
+.invoice-doc.tpl-minimal {
+  background: #ffffff; border-color: rgba(0,0,0,0.08);
+  border-radius: 0; padding: 36px 40px;
+}
+.invoice-doc.tpl-minimal .doc-head {
+  border-bottom: 2px solid #0c0b0a; padding-bottom: 16px; margin-bottom: 20px;
+}
+.invoice-doc.tpl-minimal .doc-brand { font-size: 20px; letter-spacing: -0.5px; }
+.invoice-doc.tpl-minimal .doc-num-label {
+  font-size: 8px; letter-spacing: 3px; text-transform: uppercase; color: #9a9890;
+}
+.invoice-doc.tpl-minimal .doc-num-val { font-size: 15px; font-weight: 600; }
+.invoice-doc.tpl-minimal .doc-table th {
+  font-weight: 600; font-size: 10px; color: #0c0b0a; border-bottom: 1.5px solid #0c0b0a;
+}
+.invoice-doc.tpl-minimal .doc-table td { border-bottom-color: rgba(0,0,0,0.06); }
+.invoice-doc.tpl-minimal .dt-row.grand {
+  font-size: 15px; border-top: 1.5px solid #0c0b0a;
+}
+
+/* ─── Toast ──────────────────────────────────────────── */
+#toast {
+  position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px);
+  background: var(--ink); color: #fff;
+  padding: 12px 24px; border-radius: 10px; font-size: 13px;
+  box-shadow: var(--shadow-lg); z-index: 999;
+  transition: transform 0.3s ease;
+  pointer-events: none;
+}
+#toast.show { transform: translateX(-50%) translateY(0); }
+
+/* ─── Responsive ─────────────────────────────────────── */
+@media (max-width: 900px) {
+  .hero-grid, .gen-grid, .footer-grid { grid-template-columns: 1fr; }
+  .preview-shell { display: none; }
+  .hero-h1 { font-size: 42px; }
+  .features-grid { grid-template-columns: repeat(2, 1fr); }
+  .pricing-grid { grid-template-columns: 1fr; }
+  .preview-panel { position: static; }
+  .nav-links, .btn-nav { display: none; }
+  .nav-hamburger { display: block; }
+  .container { padding: 0 20px; }
+}
+
+@media (max-width: 600px) {
+  .features-grid { grid-template-columns: 1fr; }
+  .hero-h1 { font-size: 36px; }
+  .hero-trust { flex-wrap: wrap; gap: 20px; }
+}
+
+/* ─── Animations ─────────────────────────────────────── */
+.fade-in {
+  opacity: 0; transform: translateY(16px);
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
+.fade-in.visible { opacity: 1; transform: translateY(0); }
+</style>
+</head>
+
+<body>
+
+<!-- ─── Navigation ─────────────────────── -->
+<nav id="navbar" aria-label="Main navigation">
+  <div class="container nav-inner">
+    <a href="/" class="nav-logo" aria-label="InvoiceNow home">Invoice<span>Now</span></a>
+
+    <ul class="nav-links">
+      <li><a href="#features" data-i18n="nav.features">Features</a></li>
+      <li><a href="#generator" data-i18n="nav.generator">Generator</a></li>
+      <li><a href="#pricing" data-i18n="nav.pricing">Pricing</a></li>
+      <li><a href="#faq" data-i18n="nav.faq">FAQ</a></li>
+    </ul>
+
+    <div class="nav-right">
+      <div class="lang-switch" role="group" aria-label="Language selector">
+        <button id="btn-en" class="active" onclick="setLang('en')" aria-pressed="true">EN</button>
+        <button id="btn-zh" onclick="setLang('zh')" aria-pressed="false">中文</button>
+      </div>
+      <a href="#generator" class="btn-nav" data-i18n="nav.cta">Create Invoice</a>
+    </div>
+
+    <button class="nav-hamburger" aria-label="Open menu" onclick="toggleMobileNav()">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+</nav>
+
+<!-- ─── Hero ──────────────────────────── -->
+<section id="hero" aria-labelledby="hero-heading">
+  <div class="container">
+    <div class="hero-grid">
+      <!-- Left: copy -->
+      <div>
+        <div class="hero-eyebrow">
+          <span class="eyebrow-dot"></span>
+          <span data-i18n="hero.eyebrow">Made for Sydney Businesses</span>
+        </div>
+        <h1 class="hero-h1" id="hero-heading">
+          <span data-i18n="hero.h1a">Professional</span><br>
+          <span data-i18n="hero.h1b">invoices,</span><br>
+          <em data-i18n="hero.h1c">instantly.</em>
+        </h1>
+        <p class="hero-desc" data-i18n="hero.desc">
+          The fastest way to create, download and send professional tax invoices. Built for Sydney freelancers and small businesses — GST-ready, ABN-verified, no signup needed.
+        </p>
+        <p class="hero-location">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+          <span data-i18n="hero.location">Sydney, NSW · ABN & GST Compliant</span>
+        </p>
+        <div class="hero-actions">
+          <a href="#generator" class="btn-primary">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            <span data-i18n="hero.cta1">Create Free Invoice</span>
+          </a>
+          <a href="#features" class="btn-ghost" data-i18n="hero.cta2">See Features</a>
+        </div>
+        <div class="hero-trust">
+          <div class="trust-item">
+            <div class="num">12k+</div>
+            <div class="lbl" data-i18n="hero.trust1">Invoices created</div>
+          </div>
+          <div class="trust-item">
+            <div class="num">48</div>
+            <div class="lbl" data-i18n="hero.trust2">Currencies</div>
+          </div>
+          <div class="trust-item">
+            <div class="num">100%</div>
+            <div class="lbl" data-i18n="hero.trust3">Free to start</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right: preview -->
+      <div aria-hidden="true">
+        <div class="preview-shell">
+          <div class="browser-bar">
+            <div class="bdot bdot-r"></div>
+            <div class="bdot bdot-y"></div>
+            <div class="bdot bdot-g"></div>
+            <div class="burl">invoicenow.me</div>
+          </div>
+          <div class="inv-card">
+            <div class="inv-card-head">
+              <div>
+                <div class="inv-brand">Harbour Creative</div>
+                <div class="inv-brand-sub">Sydney NSW 2000 · ABN 12 345 678 901</div>
+              </div>
+              <div class="inv-num-block">
+                <div class="inv-num-label">TAX INVOICE</div>
+                <div class="inv-num-val">#INV-2024-048</div>
+                <div class="inv-num-date">17 Mar 2024 · Due 16 Apr</div>
+              </div>
+            </div>
+            <div class="inv-parties">
+              <div><div class="party-lbl">From</div><div class="party-name">James Chen Design</div><div class="party-sub">james@chendesign.com.au</div></div>
+              <div><div class="party-lbl">Bill To</div><div class="party-name">TechStart Pty Ltd</div><div class="party-sub">accounts@techstart.com.au</div></div>
+            </div>
+            <table class="inv-table-mini">
+              <thead><tr><th>Description</th><th style="text-align:right">Qty</th><th style="text-align:right">Rate</th><th style="text-align:right">Amount</th></tr></thead>
+              <tbody>
+                <tr><td>Brand Strategy</td><td style="text-align:right">1</td><td style="text-align:right">$3,200</td><td style="text-align:right">$3,200</td></tr>
+                <tr><td>Website Design</td><td style="text-align:right">1</td><td style="text-align:right">$4,500</td><td style="text-align:right">$4,500</td></tr>
+                <tr><td>Revisions</td><td style="text-align:right">3</td><td style="text-align:right">$200</td><td style="text-align:right">$600</td></tr>
+              </tbody>
+            </table>
+            <div class="inv-totals-mini">
+              <div class="inv-tot-row"><span>Subtotal</span><span>$8,300</span></div>
+              <div class="inv-tot-row"><span>GST 10%</span><span>$830</span></div>
+              <div class="inv-tot-row final"><span>Total AUD</span><span>$9,130</span></div>
+            </div>
+            <div class="gst-note">GST Registered · Tax Invoice per ATO requirements</div>
+            <div><span class="inv-status-pill">● UNPAID · Due in 30 days</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="section-divider">
+
+<!-- ─── Features ──────────────────────── -->
+<section id="features" aria-labelledby="features-heading">
+  <div class="container">
+    <div class="section-eyebrow" data-i18n="features.eyebrow">Features</div>
+    <h2 class="section-title" id="features-heading" data-i18n="features.title">Everything you need<br>to invoice clients</h2>
+    <div class="features-grid">
+      <div class="feat-card fade-in">
+        <div class="feat-icon" aria-hidden="true">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        </div>
+        <h3 class="feat-title" data-i18n="features.f1.title">GST-Ready Tax Invoices</h3>
+        <p class="feat-desc" data-i18n="features.f1.desc">Automatically calculates GST at 10%. ABN field included. Formatted as a valid ATO tax invoice — ready to send to clients immediately.</p>
+      </div>
+      <div class="feat-card fade-in">
+        <div class="feat-icon" aria-hidden="true">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+        </div>
+        <h3 class="feat-title" data-i18n="features.f2.title">Professional PDF</h3>
+        <p class="feat-desc" data-i18n="features.f2.desc">Download a clean, print-ready PDF in one click. No watermarks, no branding. Looks like it was made by a professional designer.</p>
+      </div>
+      <div class="feat-card fade-in">
+        <div class="feat-icon" aria-hidden="true">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+        </div>
+        <h3 class="feat-title" data-i18n="features.f3.title">ABN Verification</h3>
+        <p class="feat-desc" data-i18n="features.f3.desc">Enter your ABN and we'll validate it against the Australian Business Register. Automatically pulls your registered business name.</p>
+      </div>
+      <div class="feat-card fade-in">
+        <div class="feat-icon" aria-hidden="true">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+        </div>
+        <h3 class="feat-title" data-i18n="features.f4.title">Multi-Currency</h3>
+        <p class="feat-desc" data-i18n="features.f4.desc">Support for AUD, USD, CNY, EUR, GBP, HKD, SGD and more. Perfect for businesses working with international clients.</p>
+      </div>
+      <div class="feat-card fade-in">
+        <div class="feat-icon" aria-hidden="true">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+        </div>
+        <h3 class="feat-title" data-i18n="features.f5.title">Multiple Line Items</h3>
+        <p class="feat-desc" data-i18n="features.f5.desc">Add unlimited services, products or expenses. Quantity, unit rate and subtotals are all calculated automatically in real time.</p>
+      </div>
+      <div class="feat-card fade-in">
+        <div class="feat-icon" aria-hidden="true">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+        </div>
+        <h3 class="feat-title" data-i18n="features.f6.title">No Signup Required</h3>
+        <p class="feat-desc" data-i18n="features.f6.desc">Fill in your details and download. No account, no email, no credit card. Just open the page and your invoice is ready in under 2 minutes.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="section-divider">
+
+<!-- ─── Generator ─────────────────────── -->
+<section id="generator" aria-labelledby="generator-heading">
+  <div class="container">
+    <div class="section-eyebrow" data-i18n="generator.eyebrow">Invoice Generator</div>
+    <h2 class="section-title" id="generator-heading" data-i18n="generator.title">Create your invoice now</h2>
+
+    <!-- Controls row -->
+    <div class="gen-controls">
+      <span class="gen-control-label" data-i18n="generator.currency">Currency:</span>
+      <select id="sel-currency" class="control-select" onchange="updatePreview()" aria-label="Select currency">
+        <option value="AUD">AUD $</option>
+        <option value="USD">USD $</option>
+        <option value="CNY">CNY ¥</option>
+        <option value="EUR">EUR €</option>
+        <option value="GBP">GBP £</option>
+        <option value="HKD">HKD $</option>
+        <option value="SGD">SGD $</option>
+      </select>
+      <span class="gen-control-label" style="margin-left:12px" data-i18n="generator.gst">GST:</span>
+      <select id="sel-gst" class="control-select" onchange="updatePreview()" aria-label="Select GST rate">
+        <option value="10">10% (AU Standard)</option>
+        <option value="0">No Tax</option>
+        <option value="5">5%</option>
+        <option value="15">15%</option>
+      </select>
+    </div>
+
+    <div class="gen-grid">
+      <!-- Form -->
+      <div>
+        <div class="form-panel">
+          <div class="form-section-title" data-i18n="generator.formTitle">Invoice Details</div>
+
+          <div class="field-row">
+            <div class="field">
+              <label data-i18n="generator.invNum">Invoice No.</label>
+              <input type="text" id="f-invnum" value="INV-2024-001" oninput="updatePreview()" aria-label="Invoice number">
+            </div>
+            <div class="field">
+              <label data-i18n="generator.date">Date</label>
+              <input type="date" id="f-date" oninput="updatePreview()" aria-label="Invoice date">
+            </div>
+          </div>
+
+          <div class="field-row">
+            <div class="field">
+              <label data-i18n="generator.dueDate">Due Date</label>
+              <input type="date" id="f-duedate" oninput="updatePreview()" aria-label="Due date">
+            </div>
+            <div class="field">
+              <label data-i18n="generator.abn">ABN</label>
+              <div class="abn-wrap">
+                <input type="text" id="f-abn" placeholder="12 345 678 901"
+                  oninput="handleABNInput(this.value)"
+                  aria-label="Australian Business Number"
+                  aria-describedby="abn-result">
+                <span class="abn-status" id="abn-status"></span>
+              </div>
+              <div class="abn-lookup-result" id="abn-result" role="status" aria-live="polite"></div>
+            </div>
+          </div>
+
+          <div class="field">
+            <label data-i18n="generator.fromName">Your Name / Business</label>
+            <input type="text" id="f-fromname" value="Your Business Name" oninput="updatePreview()" aria-label="Your business name">
+          </div>
+
+          <div class="field">
+            <label data-i18n="generator.fromDetail">Address / Email</label>
+            <input type="text" id="f-fromdetail" value="Sydney, NSW 2000" oninput="updatePreview()" aria-label="Your address or email">
+          </div>
+
+          <div class="field">
+            <label data-i18n="generator.toName">Bill To (Client)</label>
+            <input type="text" id="f-toname" value="Client Company Pty Ltd" oninput="updatePreview()" aria-label="Client name">
+          </div>
+
+          <div class="field-row">
+            <div class="field">
+              <label data-i18n="generator.toDetail">Client Email / Address</label>
+              <input type="text" id="f-todetail" value="accounts@client.com.au" oninput="updatePreview()" aria-label="Client email or address">
+            </div>
+            <div class="field">
+              <label data-i18n="generator.clientAbn">Client ABN</label>
+              <div class="abn-wrap">
+                <input type="text" id="f-clientabn" placeholder="98 765 432 109"
+                  oninput="handleClientABNInput(this.value)"
+                  aria-label="Client Australian Business Number"
+                  aria-describedby="client-abn-result">
+                <span class="abn-status" id="client-abn-status"></span>
+              </div>
+              <div class="abn-lookup-result" id="client-abn-result" role="status" aria-live="polite"></div>
+            </div>
+          </div>
+
+          <!-- Line Items -->
+          <div class="items-section">
+            <div class="items-section-title" data-i18n="generator.lineItems">Line Items</div>
+            <div class="items-cols">
+              <span data-i18n="generator.desc">Description</span>
+              <span data-i18n="generator.qty">Qty</span>
+              <span data-i18n="generator.rate">Rate</span>
+              <span></span>
+            </div>
+            <div id="items-container" role="list" aria-label="Invoice line items"></div>
+            <button class="add-item-btn" onclick="addItem()" data-i18n="generator.addItem">+ Add Item</button>
+          </div>
+
+          <!-- Totals -->
+          <div class="totals-section" aria-live="polite">
+            <div class="total-row">
+              <span data-i18n="generator.subtotal">Subtotal</span>
+              <span id="calc-subtotal">$0.00</span>
+            </div>
+            <div class="total-row">
+              <span id="calc-gst-label">GST (10%)</span>
+              <span id="calc-gst">$0.00</span>
+            </div>
+            <div class="total-row grand">
+              <span id="calc-total-label">Total AUD</span>
+              <span id="calc-total">$0.00</span>
+            </div>
+          </div>
+
+          <div class="field" style="margin-top:16px">
+            <label data-i18n="generator.bankDetails">Bank Details</label>
+            <textarea id="f-bank" placeholder="BSB: 062-000&#10;Account: 1234 5678&#10;Account Name: Your Business Name" oninput="updatePreview()" aria-label="Bank details" style="min-height:68px"></textarea>
+          </div>
+
+          <div class="field" style="margin-bottom:0">
+            <label data-i18n="generator.notes">Notes</label>
+            <textarea id="f-notes" placeholder="Payment due within 30 days. Thank you for your business." oninput="updatePreview()" aria-label="Invoice notes" style="min-height:52px"></textarea>
+          </div>
+
+          <!-- Template Picker -->
+          <div class="template-picker" style="margin-top:20px;padding-top:18px;border-top:0.5px solid var(--border)">
+            <span class="template-picker-label" data-i18n="generator.chooseTemplate">Choose Template</span>
+            <div class="template-cards">
+              <div class="tpl-card active" data-tpl="classic" onclick="setTemplate('classic')" tabindex="0" role="button" aria-pressed="true">
+                <div class="tpl-thumb"></div>
+                <div class="tpl-info">
+                  <div class="tpl-name" data-i18n="tpl.classic.name">Classic</div>
+                  <div class="tpl-desc" data-i18n="tpl.classic.desc">Green · Professional</div>
+                </div>
+              </div>
+              <div class="tpl-card" data-tpl="bold" onclick="setTemplate('bold')" tabindex="0" role="button" aria-pressed="false">
+                <div class="tpl-thumb"></div>
+                <div class="tpl-info">
+                  <div class="tpl-name" data-i18n="tpl.bold.name">Bold</div>
+                  <div class="tpl-desc" data-i18n="tpl.bold.desc">Dark · High-impact</div>
+                </div>
+              </div>
+              <div class="tpl-card" data-tpl="minimal" onclick="setTemplate('minimal')" tabindex="0" role="button" aria-pressed="false">
+                <div class="tpl-thumb"></div>
+                <div class="tpl-info">
+                  <div class="tpl-name" data-i18n="tpl.minimal.name">Minimal</div>
+                  <div class="tpl-desc" data-i18n="tpl.minimal.desc">Clean · Black & White</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <button class="dl-btn" id="dl-btn" onclick="generatePDF()" aria-label="Download PDF invoice">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            <span data-i18n="generator.download">Download PDF</span>
+          </button>
+          <p class="gst-compliance" data-i18n="generator.compliance">Compliant with ATO tax invoice requirements</p>
+        </div>
+      </div>
+
+      <!-- Live Preview -->
+      <div class="preview-panel" aria-live="polite" aria-label="Invoice preview">
+        <div class="preview-header">
+          <span class="preview-label" data-i18n="generator.previewLabel">Preview</span>
+          <span class="preview-live-badge" data-i18n="generator.liveBadge">Live</span>
+        </div>
+        <div class="invoice-doc" id="preview-doc">
+          <div class="doc-head">
+            <div>
+              <div class="doc-brand" id="prev-from">Your Business</div>
+              <div class="doc-brand-sub" id="prev-fromdetail">Sydney, NSW 2000</div>
+            </div>
+            <div class="doc-num-block">
+              <div class="doc-num-label" id="prev-inv-lbl">TAX INVOICE</div>
+              <div class="doc-num-val" id="prev-num">#INV-2024-001</div>
+              <div class="doc-num-date" id="prev-date"></div>
+            </div>
+          </div>
+          <div class="doc-parties">
+            <div>
+              <div class="dp-lbl" id="prev-lbl-from">From</div>
+              <div class="dp-name" id="prev-from2">Your Business</div>
+              <div class="dp-sub" id="prev-fromdetail2"></div>
+            </div>
+            <div>
+              <div class="dp-lbl" id="prev-lbl-to">Bill To</div>
+              <div class="dp-name" id="prev-to">Client Company Pty Ltd</div>
+              <div class="dp-sub" id="prev-todetail"></div>
+              <div class="dp-clientabn" id="prev-clientabn"></div>
+            </div>
+          </div>
+          <table class="doc-table">
+            <thead>
+              <tr>
+                <th id="prev-th1">Description</th>
+                <th style="text-align:right" id="prev-th2">Qty</th>
+                <th style="text-align:right" id="prev-th3">Rate</th>
+                <th style="text-align:right" id="prev-th4">Amount</th>
+              </tr>
+            </thead>
+            <tbody id="prev-tbody"></tbody>
+          </table>
+          <div class="doc-totals">
+            <div class="dt-row"><span id="prev-subtotal-lbl">Subtotal</span><span id="prev-subtotal">$0.00</span></div>
+            <div class="dt-row"><span id="prev-gst-lbl">GST (10%)</span><span id="prev-gst">$0.00</span></div>
+            <div class="dt-row grand"><span id="prev-total-lbl">Total AUD</span><span id="prev-total">$0.00</span></div>
+          </div>
+          <div class="doc-footer">
+            <div class="doc-bank" id="prev-bank" style="display:none"></div>
+            <div class="doc-notes" id="prev-notes" style="display:none"></div>
+            <div class="doc-abn" id="prev-abn"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="section-divider">
+
+<!-- ─── Pricing ───────────────────────── -->
+<section id="pricing" aria-labelledby="pricing-heading">
+  <div class="container">
+    <div class="section-eyebrow" data-i18n="pricing.eyebrow">Pricing</div>
+    <h2 class="section-title" id="pricing-heading" data-i18n="pricing.title">Start free,<br>upgrade when ready</h2>
+
+    <div class="pricing-grid">
+      <!-- Free -->
+      <div class="price-card fade-in">
+        <div class="plan-name" data-i18n="pricing.free.name">Free</div>
+        <div class="plan-price"><sup></sup>$0</div>
+        <div class="plan-period" data-i18n="pricing.free.period">Forever free</div>
+        <ul class="plan-features">
+          <li><div class="feature-check on"></div><span data-i18n="pricing.f1">Unlimited invoices</span></li>
+          <li><div class="feature-check on"></div><span data-i18n="pricing.f2">PDF download</span></li>
+          <li><div class="feature-check on"></div><span data-i18n="pricing.f3">GST & ABN fields</span></li>
+          <li><div class="feature-check on"></div><span data-i18n="pricing.f4free">3 currencies</span></li>
+          <li><div class="feature-check off"></div><span data-i18n="pricing.f5">Save invoice history</span></li>
+          <li><div class="feature-check off"></div><span data-i18n="pricing.f6">Client management</span></li>
+          <li><div class="feature-check off"></div><span data-i18n="pricing.f7">Email to client</span></li>
+        </ul>
+        <button class="plan-btn plan-btn-outline" onclick="document.getElementById('generator').scrollIntoView({behavior:'smooth'})" data-i18n="pricing.free.cta">Get Started</button>
+      </div>
+
+      <!-- Pro (featured) -->
+      <div class="price-card featured fade-in">
+        <div class="featured-badge" data-i18n="pricing.pro.badge">Most Popular</div>
+        <div class="plan-name" data-i18n="pricing.pro.name">Pro</div>
+        <div class="plan-price"><sup>$</sup>9</div>
+        <div class="plan-period" data-i18n="pricing.pro.period">per month · billed monthly</div>
+        <ul class="plan-features">
+          <li><div class="feature-check on"></div><span data-i18n="pricing.f1">Unlimited invoices</span></li>
+          <li><div class="feature-check on"></div><span data-i18n="pricing.f2">PDF download</span></li>
+          <li><div class="feature-check on"></div><span data-i18n="pricing.f3">GST & ABN fields</span></li>
+          <li><div class="feature-check on"></div><span data-i18n="pricing.f4pro">48 currencies</span></li>
+          <li><div class="feature-check on"></div><span data-i18n="pricing.f5">Save invoice history</span></li>
+          <li><div class="feature-check on"></div><span data-i18n="pricing.f6">Client management</span></li>
+          <li><div class="feature-check off"></div><span data-i18n="pricing.f7">Email to client</span></li>
+        </ul>
+        <button class="plan-btn plan-btn-solid" data-i18n="pricing.pro.cta">Upgrade to Pro</button>
+      </div>
+
+      <!-- Business -->
+      <div class="price-card fade-in">
+        <div class="plan-name" data-i18n="pricing.biz.name">Business</div>
+        <div class="plan-price"><sup>$</sup>29</div>
+        <div class="plan-period" data-i18n="pricing.biz.period">per month · billed monthly</div>
+        <ul class="plan-features">
+          <li><div class="feature-check on"></div><span data-i18n="pricing.f1">Unlimited invoices</span></li>
+          <li><div class="feature-check on"></div><span data-i18n="pricing.f2">PDF download</span></li>
+          <li><div class="feature-check on"></div><span data-i18n="pricing.f3">GST & ABN fields</span></li>
+          <li><div class="feature-check on"></div><span data-i18n="pricing.f4pro">48 currencies</span></li>
+          <li><div class="feature-check on"></div><span data-i18n="pricing.f5">Save invoice history</span></li>
+          <li><div class="feature-check on"></div><span data-i18n="pricing.f6">Client management</span></li>
+          <li><div class="feature-check on"></div><span data-i18n="pricing.f7">Email to client</span></li>
+        </ul>
+        <button class="plan-btn plan-btn-outline" data-i18n="pricing.biz.cta">Contact Us</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="section-divider">
+
+<!-- ─── FAQ ───────────────────────────── -->
+<section id="faq" aria-labelledby="faq-heading">
+  <div class="container">
+    <div class="section-eyebrow" data-i18n="faq.eyebrow">FAQ</div>
+    <h2 class="section-title" id="faq-heading" data-i18n="faq.title">Common questions</h2>
+
+    <div class="faq-list" role="list">
+      <div class="faq-item" role="listitem">
+        <div class="faq-q" onclick="toggleFaq(this)" tabindex="0" role="button" aria-expanded="false">
+          <span data-i18n="faq.q1">Is this really free?</span>
+          <span class="faq-icon" aria-hidden="true">+</span>
+        </div>
+        <div class="faq-a" data-i18n="faq.a1">Yes, completely free. You can create and download unlimited invoices with no account required. We plan to add premium features in the future, but the core invoice generator will always be free.</div>
+      </div>
+      <div class="faq-item" role="listitem">
+        <div class="faq-q" onclick="toggleFaq(this)" tabindex="0" role="button" aria-expanded="false">
+          <span data-i18n="faq.q2">Is this invoice valid for ATO purposes?</span>
+          <span class="faq-icon" aria-hidden="true">+</span>
+        </div>
+        <div class="faq-a" data-i18n="faq.a2">Yes. Our invoices include all required fields for a valid Australian tax invoice: supplier name, ABN, date, description of goods/services, GST amount, and total price including GST. This meets ATO requirements for invoices over $1,000.</div>
+      </div>
+      <div class="faq-item" role="listitem">
+        <div class="faq-q" onclick="toggleFaq(this)" tabindex="0" role="button" aria-expanded="false">
+          <span data-i18n="faq.q3">Do I need to register for GST to use this?</span>
+          <span class="faq-icon" aria-hidden="true">+</span>
+        </div>
+        <div class="faq-a" data-i18n="faq.a3">No. If your annual turnover is under $75,000 you're not required to register for GST. You can set the GST rate to 0% and still create a professional invoice with your ABN. If you are GST registered, our 10% calculation handles it automatically.</div>
+      </div>
+      <div class="faq-item" role="listitem">
+        <div class="faq-q" onclick="toggleFaq(this)" tabindex="0" role="button" aria-expanded="false">
+          <span data-i18n="faq.q4">Where is my data stored?</span>
+          <span class="faq-icon" aria-hidden="true">+</span>
+        </div>
+        <div class="faq-a" data-i18n="faq.a4">Nothing is stored on our servers. All invoice data stays in your browser only. When you close the tab, the data is gone. We never see your business information or your clients' details.</div>
+      </div>
+      <div class="faq-item" role="listitem">
+        <div class="faq-q" onclick="toggleFaq(this)" tabindex="0" role="button" aria-expanded="false">
+          <span data-i18n="faq.q5">Can I use this for my Chinese-speaking clients?</span>
+          <span class="faq-icon" aria-hidden="true">+</span>
+        </div>
+        <div class="faq-a" data-i18n="faq.a5">Yes! Use the EN/中文 toggle in the top right to switch the entire interface to Chinese. You can also mix languages — type Chinese in the description fields while keeping the invoice structure in English.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── Footer ────────────────────────── -->
+<footer>
+  <div class="container">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <div class="footer-logo">Invoice<span>Now</span></div>
+        <p class="footer-tagline" data-i18n="footer.tagline">Professional invoices for Sydney freelancers and small businesses. GST-ready, ABN-compliant, always free to start.</p>
+      </div>
+      <div>
+        <div class="footer-col-title" data-i18n="footer.col1">Product</div>
+        <ul class="footer-links">
+          <li><a href="#features" data-i18n="footer.features">Features</a></li>
+          <li><a href="#generator" data-i18n="footer.generator">Invoice Generator</a></li>
+          <li><a href="#pricing" data-i18n="footer.pricing">Pricing</a></li>
+          <li><a href="#faq" data-i18n="footer.faq">FAQ</a></li>
+        </ul>
+      </div>
+      <div>
+        <div class="footer-col-title" data-i18n="footer.col2">Resources</div>
+        <ul class="footer-links">
+          <li><a href="https://www.ato.gov.au/business/gst/tax-invoices/" target="_blank" rel="noopener" data-i18n="footer.ato">ATO Tax Invoice Guide</a></li>
+          <li><a href="https://www.abr.business.gov.au/" target="_blank" rel="noopener" data-i18n="footer.abr">ABN Lookup</a></li>
+          <li><a href="https://business.gov.au/Finance/Payments/Invoicing" target="_blank" rel="noopener" data-i18n="footer.bgov">Business.gov.au</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <div class="footer-copy">© 2024 InvoiceNow.me · Sydney, NSW, Australia</div>
+      <div class="footer-compliance">ABN & GST Compliant · ATO Tax Invoice Standards</div>
+    </div>
+  </div>
+</footer>
+
+<!-- Toast notification -->
+<div id="toast" role="alert" aria-live="assertive"></div>
+
+<!-- ─────────────────────────────────────────────── -->
+<!-- JavaScript                                      -->
+<!-- ─────────────────────────────────────────────── -->
+<script>
+// ─── i18n ─────────────────────────────────────────
+const TRANSLATIONS = {
+  en: {
+    'nav.features': 'Features',
+    'nav.generator': 'Generator',
+    'nav.pricing': 'Pricing',
+    'nav.faq': 'FAQ',
+    'nav.cta': 'Create Invoice',
+    'hero.eyebrow': 'Made for Sydney Businesses',
+    'hero.h1a': 'Professional',
+    'hero.h1b': 'invoices,',
+    'hero.h1c': 'instantly.',
+    'hero.desc': 'The fastest way to create, download and send professional tax invoices. Built for Sydney freelancers and small businesses — GST-ready, ABN-verified, no signup needed.',
+    'hero.location': 'Sydney, NSW · ABN & GST Compliant',
+    'hero.cta1': 'Create Free Invoice',
+    'hero.cta2': 'See Features',
+    'hero.trust1': 'Invoices created',
+    'hero.trust2': 'Currencies',
+    'hero.trust3': 'Free to start',
+    'features.eyebrow': 'Features',
+    'features.title': 'Everything you need\nto invoice clients',
+    'features.f1.title': 'GST-Ready Tax Invoices',
+    'features.f1.desc': 'Automatically calculates GST at 10%. ABN field included. Formatted as a valid ATO tax invoice — ready to send to clients immediately.',
+    'features.f2.title': 'Professional PDF',
+    'features.f2.desc': 'Download a clean, print-ready PDF in one click. No watermarks, no branding. Looks like it was made by a professional designer.',
+    'features.f3.title': 'ABN Verification',
+    'features.f3.desc': 'Enter your ABN and we\'ll validate it against the Australian Business Register. Automatically pulls your registered business name.',
+    'features.f4.title': 'Multi-Currency',
+    'features.f4.desc': 'Support for AUD, USD, CNY, EUR, GBP, HKD, SGD and more. Perfect for businesses working with international clients.',
+    'features.f5.title': 'Multiple Line Items',
+    'features.f5.desc': 'Add unlimited services, products or expenses. Quantity, unit rate and subtotals are all calculated automatically in real time.',
+    'features.f6.title': 'No Signup Required',
+    'features.f6.desc': 'Fill in your details and download. No account, no email, no credit card. Just open the page and your invoice is ready in under 2 minutes.',
+    'generator.eyebrow': 'Invoice Generator',
+    'generator.title': 'Create your invoice now',
+    'generator.currency': 'Currency:',
+    'generator.gst': 'GST:',
+    'generator.formTitle': 'Invoice Details',
+    'generator.invNum': 'Invoice No.',
+    'generator.date': 'Date',
+    'generator.dueDate': 'Due Date',
+    'generator.abn': 'ABN',
+    'generator.fromName': 'Your Name / Business',
+    'generator.fromDetail': 'Address / Email',
+    'generator.toName': 'Bill To (Client)',
+    'generator.toDetail': 'Client Email / Address',
+    'generator.clientAbn': 'Client ABN',
+    'generator.bankDetails': 'Bank Details',
+    'generator.notes': 'Notes',
+    'generator.desc': 'Description',
+    'generator.qty': 'Qty',
+    'generator.rate': 'Rate',
+    'generator.addItem': '+ Add Item',
+    'generator.subtotal': 'Subtotal',
+    'generator.notes': 'Payment Notes / Bank Details',
+    'generator.download': 'Download PDF',
+    'generator.compliance': 'Compliant with ATO tax invoice requirements',
+    'generator.previewLabel': 'Preview',
+    'generator.liveBadge': 'Live',
+    'generator.prevFrom': 'From',
+    'generator.prevTo': 'Bill To',
+    'generator.prevTh': ['Description', 'Qty', 'Rate', 'Amount'],
+    'generator.subtotalLbl': 'Subtotal',
+    'generator.invLabel': 'TAX INVOICE',
+    'pricing.eyebrow': 'Pricing',
+    'pricing.title': 'Start free,\nupgrade when ready',
+    'pricing.free.name': 'Free',
+    'pricing.free.period': 'Forever free',
+    'pricing.free.cta': 'Get Started',
+    'pricing.pro.badge': 'Most Popular',
+    'pricing.pro.name': 'Pro',
+    'pricing.pro.period': 'per month · billed monthly',
+    'pricing.pro.cta': 'Upgrade to Pro',
+    'pricing.biz.name': 'Business',
+    'pricing.biz.period': 'per month · billed monthly',
+    'pricing.biz.cta': 'Contact Us',
+    'pricing.f1': 'Unlimited invoices',
+    'pricing.f2': 'PDF download',
+    'pricing.f3': 'GST & ABN fields',
+    'pricing.f4free': '3 currencies',
+    'pricing.f4pro': '48 currencies',
+    'pricing.f5': 'Save invoice history',
+    'pricing.f6': 'Client management',
+    'pricing.f7': 'Email to client',
+    'faq.eyebrow': 'FAQ',
+    'faq.title': 'Common questions',
+    'faq.q1': 'Is this really free?',
+    'faq.a1': 'Yes, completely free. You can create and download unlimited invoices with no account required. We plan to add premium features in the future, but the core invoice generator will always be free.',
+    'faq.q2': 'Is this invoice valid for ATO purposes?',
+    'faq.a2': 'Yes. Our invoices include all required fields for a valid Australian tax invoice: supplier name, ABN, date, description, GST amount, and total. This meets ATO requirements for invoices over $1,000.',
+    'faq.q3': 'Do I need to register for GST to use this?',
+    'faq.a3': 'No. If your annual turnover is under $75,000 you\'re not required to register for GST. Set the GST rate to 0% and still create a professional invoice with your ABN.',
+    'faq.q4': 'Where is my data stored?',
+    'faq.a4': 'Nothing is stored on our servers. All invoice data stays in your browser only. We never see your business information or your clients\' details.',
+    'faq.q5': 'Can I use this for my Chinese-speaking clients?',
+    'faq.a5': 'Yes! Use the EN/中文 toggle in the top right to switch the entire interface to Chinese. You can mix languages freely in the description fields.',
+    'footer.tagline': 'Professional invoices for Sydney freelancers and small businesses. GST-ready, ABN-compliant, always free to start.',
+    'footer.col1': 'Product',
+    'footer.col2': 'Resources',
+    'footer.features': 'Features',
+    'footer.generator': 'Invoice Generator',
+    'footer.pricing': 'Pricing',
+    'footer.faq': 'FAQ',
+    'footer.ato': 'ATO Tax Invoice Guide',
+    'footer.abr': 'ABN Lookup',
+    'footer.bgov': 'Business.gov.au',
+    'generator.chooseTemplate': 'Choose Template',
+    'tpl.classic.name': 'Classic',
+    'tpl.classic.desc': 'Green · Professional',
+    'tpl.bold.name': 'Bold',
+    'tpl.bold.desc': 'Dark · High-impact',
+    'tpl.minimal.name': 'Minimal',
+    'tpl.minimal.desc': 'Clean · Black & White',
+  },
+  zh: {
+    'nav.features': '功能',
+    'nav.generator': '生成器',
+    'nav.pricing': '价格',
+    'nav.faq': '常见问题',
+    'nav.cta': '创建发票',
+    'hero.eyebrow': '专为悉尼企业打造',
+    'hero.h1a': '专业发票',
+    'hero.h1b': '',
+    'hero.h1c': '一键生成',
+    'hero.desc': '最快速的在线税务发票工具，专为悉尼自由职业者和小型企业设计。GST 合规、ABN 验证，无需注册。',
+    'hero.location': '悉尼 NSW · ABN & GST 合规',
+    'hero.cta1': '免费创建发票',
+    'hero.cta2': '查看功能',
+    'hero.trust1': '已生成发票',
+    'hero.trust2': '支持货币',
+    'hero.trust3': '免费开始',
+    'features.eyebrow': '核心功能',
+    'features.title': '一切你需要的\n发票功能',
+    'features.f1.title': 'GST 合规税务发票',
+    'features.f1.desc': '自动按 10% 计算 GST，包含 ABN 字段，格式符合澳大利亚税务局要求，可直接发送给客户。',
+    'features.f2.title': '专业 PDF 下载',
+    'features.f2.desc': '一键下载专业美观的 PDF 发票，无水印，无品牌标识，看起来像专业设计师制作的。',
+    'features.f3.title': 'ABN 验证',
+    'features.f3.desc': '输入 ABN 后自动验证，从澳大利亚商业登记处获取已注册的公司名称。',
+    'features.f4.title': '多货币支持',
+    'features.f4.desc': '支持 AUD、USD、CNY、EUR、GBP、HKD、SGD 等多种货币，适合有国际客户的企业。',
+    'features.f5.title': '多服务项目',
+    'features.f5.desc': '添加无限服务项目，数量、单价和小计实时自动计算，无需手动算账。',
+    'features.f6.title': '无需注册',
+    'features.f6.desc': '填写信息后直接下载，无需账号、邮箱或信用卡。打开页面两分钟内完成发票。',
+    'generator.eyebrow': '在线生成器',
+    'generator.title': '立即创建发票',
+    'generator.currency': '货币：',
+    'generator.gst': 'GST：',
+    'generator.formTitle': '发票信息',
+    'generator.invNum': '发票编号',
+    'generator.date': '日期',
+    'generator.dueDate': '付款截止',
+    'generator.abn': 'ABN',
+    'generator.fromName': '你的姓名 / 公司',
+    'generator.fromDetail': '地址 / 邮箱',
+    'generator.toName': '客户名称',
+    'generator.toDetail': '客户邮箱 / 地址',
+    'generator.clientAbn': '客户 ABN',
+    'generator.bankDetails': '银行账号',
+    'generator.notes': '备注',
+    'generator.desc': '描述',
+    'generator.qty': '数量',
+    'generator.rate': '单价',
+    'generator.addItem': '+ 添加项目',
+    'generator.subtotal': '小计',
+    'generator.notes': '付款备注 / 银行账号',
+    'generator.download': '下载 PDF',
+    'generator.compliance': '符合澳大利亚税务局发票要求',
+    'generator.previewLabel': '预览',
+    'generator.liveBadge': '实时',
+    'generator.prevFrom': '发票方',
+    'generator.prevTo': '收款方',
+    'generator.prevTh': ['描述', '数量', '单价', '金额'],
+    'generator.subtotalLbl': '小计',
+    'generator.invLabel': '税务发票',
+    'pricing.eyebrow': '价格方案',
+    'pricing.title': '从免费开始，\n按需升级',
+    'pricing.free.name': '免费版',
+    'pricing.free.period': '永久免费',
+    'pricing.free.cta': '开始使用',
+    'pricing.pro.badge': '最受欢迎',
+    'pricing.pro.name': '专业版',
+    'pricing.pro.period': '每月 · 按月计费',
+    'pricing.pro.cta': '升级专业版',
+    'pricing.biz.name': '商业版',
+    'pricing.biz.period': '每月 · 按月计费',
+    'pricing.biz.cta': '联系我们',
+    'pricing.f1': '无限生成发票',
+    'pricing.f2': 'PDF 下载',
+    'pricing.f3': 'GST & ABN 字段',
+    'pricing.f4free': '3种货币',
+    'pricing.f4pro': '48种货币',
+    'pricing.f5': '保存发票历史',
+    'pricing.f6': '客户管理',
+    'pricing.f7': '邮件发送',
+    'faq.eyebrow': '常见问题',
+    'faq.title': '你可能想知道',
+    'faq.q1': '这个工具真的免费吗？',
+    'faq.a1': '是的，完全免费。无需注册账号即可无限创建和下载发票。我们计划未来添加高级功能，但核心发票生成器将永久免费。',
+    'faq.q2': '这个发票符合澳大利亚税务局要求吗？',
+    'faq.a2': '符合。我们的发票包含有效澳大利亚税务发票所需的所有字段：供应商名称、ABN、日期、商品/服务描述、GST金额和含税总价，满足 ATO 对 $1,000 以上发票的要求。',
+    'faq.q3': '我需要注册 GST 才能使用吗？',
+    'faq.a3': '不需要。如果年营业额低于 $75,000，你不需要注册 GST。可以将 GST 税率设为 0%，仍然可以用 ABN 创建专业发票。',
+    'faq.q4': '我的数据存在哪里？',
+    'faq.a4': '你的数据不会存储在我们的服务器上。所有发票信息仅保存在你的浏览器中。关闭标签页后数据即消失，我们永远不会看到你的业务信息。',
+    'faq.q5': '我可以为中文客户使用这个工具吗？',
+    'faq.a5': '可以！点击右上角的 EN/中文 按钮可以切换整个界面为中文。你也可以在描述字段中混合使用中英文。',
+    'footer.tagline': '专为悉尼自由职业者和小企业打造的专业发票工具，GST合规，ABN验证，永远免费开始。',
+    'footer.col1': '产品',
+    'footer.col2': '相关资源',
+    'footer.features': '功能介绍',
+    'footer.generator': '发票生成器',
+    'footer.pricing': '价格方案',
+    'footer.faq': '常见问题',
+    'footer.ato': 'ATO 税务发票指南',
+    'footer.abr': 'ABN 查询',
+    'footer.bgov': 'Business.gov.au',
+    'generator.chooseTemplate': '选择模板',
+    'tpl.classic.name': '经典',
+    'tpl.classic.desc': '绿色 · 专业',
+    'tpl.bold.name': '商务',
+    'tpl.bold.desc': '深色 · 高端',
+    'tpl.minimal.name': '简约',
+    'tpl.minimal.desc': '极简 · 黑白',
+  }
+};
+
+let currentLang = 'en';
+
+function t(key) {
+  return TRANSLATIONS[currentLang][key] || TRANSLATIONS['en'][key] || key;
+}
+
+function setLang(lang) {
+  currentLang = lang;
+  document.getElementById('btn-en').className = lang === 'en' ? 'active' : '';
+  document.getElementById('btn-zh').className = lang === 'zh' ? 'active' : '';
+  document.getElementById('btn-en').setAttribute('aria-pressed', lang === 'en');
+  document.getElementById('btn-zh').setAttribute('aria-pressed', lang === 'zh');
+  document.documentElement.lang = lang === 'zh' ? 'zh-Hans' : 'en';
+
+  // Update all data-i18n elements
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    const val = t(key);
+    if (val && !Array.isArray(val)) {
+      if (val.includes('\n')) {
+        el.innerHTML = val.replace(/\n/g, '<br>');
+      } else {
+        el.textContent = val;
+      }
+    }
+  });
+
+  renderItems();
+  updatePreview();
+}
+
+// ─── Line items state ─────────────────────────────
+let lineItems = [
+  { desc: 'Web Design Services', qty: 1, price: 2500 },
+  { desc: 'SEO Consultation', qty: 3, price: 300 }
+];
+
+function addItem() {
+  lineItems.push({ desc: '', qty: 1, price: 0 });
+  renderItems();
+  updatePreview();
+  // Focus the new description field
+  const inputs = document.querySelectorAll('#items-container .item-row input[type="text"]');
+  if (inputs.length > 0) inputs[inputs.length - 1].focus();
+}
+
+function removeItem(i) {
+  if (lineItems.length > 1) {
+    lineItems.splice(i, 1);
+    renderItems();
+    updatePreview();
+  }
+}
+
+function renderItems() {
+  const container = document.getElementById('items-container');
+  container.innerHTML = '';
+  lineItems.forEach((item, i) => {
+    const row = document.createElement('div');
+    row.className = 'item-row';
+    row.setAttribute('role', 'listitem');
+    row.innerHTML = `
+      <input type="text" placeholder="${t('generator.desc')}" value="${escHtml(item.desc)}"
+        oninput="lineItems[${i}].desc=this.value;updatePreview()"
+        aria-label="Item ${i+1} description">
+      <input type="number" value="${item.qty}" min="1" step="1"
+        oninput="lineItems[${i}].qty=Math.max(0,parseFloat(this.value)||0);updatePreview()"
+        aria-label="Item ${i+1} quantity">
+      <input type="number" value="${item.price}" min="0" step="0.01"
+        oninput="lineItems[${i}].price=Math.max(0,parseFloat(this.value)||0);updatePreview()"
+        aria-label="Item ${i+1} rate">
+      <button class="rm-item" onclick="removeItem(${i})" aria-label="Remove item ${i+1}" title="Remove">×</button>
+    `;
+    container.appendChild(row);
+  });
+}
+
+function escHtml(str) {
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ─── Currency helpers ─────────────────────────────
+const CURRENCY_SYMBOLS = { AUD:'$', USD:'$', CNY:'¥', EUR:'€', GBP:'£', HKD:'$', SGD:'$' };
+function getSym() { return CURRENCY_SYMBOLS[document.getElementById('sel-currency').value] || '$'; }
+function getCurr() { return document.getElementById('sel-currency').value; }
+function getGST() { return parseFloat(document.getElementById('sel-gst').value) || 0; }
+
+function formatMoney(n) {
+  return getSym() + n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+}
+
+// ─── Preview update ───────────────────────────────
+function updatePreview() {
+  const sym = getSym();
+  const curr = getCurr();
+  const gstRate = getGST();
+
+  // From / To
+  const fromName = document.getElementById('f-fromname').value || 'Your Business';
+  const fromDetail = document.getElementById('f-fromdetail').value || '';
+  const toName = document.getElementById('f-toname').value || 'Client';
+  const toDetail = document.getElementById('f-todetail').value || '';
+  const invNum = document.getElementById('f-invnum').value || '';
+  const abn = document.getElementById('f-abn').value || '';
+  const clientAbn = document.getElementById('f-clientabn').value || '';
+  const bank = document.getElementById('f-bank').value || '';
+  const notes = document.getElementById('f-notes').value || '';
+
+  // Dates
+  const dateVal = document.getElementById('f-date').value;
+  const dueDateVal = document.getElementById('f-duedate').value;
+  let dateStr = '';
+  if (dateVal) {
+    const d = new Date(dateVal + 'T00:00:00');
+    dateStr = d.toLocaleDateString(currentLang === 'zh' ? 'zh-CN' : 'en-AU', {day:'2-digit',month:'short',year:'numeric'});
+    if (dueDateVal) {
+      const dd = new Date(dueDateVal + 'T00:00:00');
+      dateStr += ' · Due ' + dd.toLocaleDateString(currentLang === 'zh' ? 'zh-CN' : 'en-AU', {day:'2-digit',month:'short',year:'numeric'});
+    }
+  }
+
+  // Set preview fields
+  document.getElementById('prev-from').textContent = fromName;
+  document.getElementById('prev-fromdetail').textContent = fromDetail;
+  document.getElementById('prev-from2').textContent = fromName;
+  document.getElementById('prev-fromdetail2').textContent = fromDetail;
+  document.getElementById('prev-to').textContent = toName;
+  document.getElementById('prev-todetail').textContent = toDetail;
+  document.getElementById('prev-clientabn').textContent = clientAbn ? `ABN ${clientAbn}` : '';
+  document.getElementById('prev-num').textContent = '#' + invNum;
+  document.getElementById('prev-date').textContent = dateStr;
+  document.getElementById('prev-inv-lbl').textContent = t('generator.invLabel');
+  document.getElementById('prev-lbl-from').textContent = t('generator.prevFrom');
+  document.getElementById('prev-lbl-to').textContent = t('generator.prevTo');
+
+  const ths = t('generator.prevTh');
+  if (Array.isArray(ths)) {
+    document.getElementById('prev-th1').textContent = ths[0];
+    document.getElementById('prev-th2').textContent = ths[1];
+    document.getElementById('prev-th3').textContent = ths[2];
+    document.getElementById('prev-th4').textContent = ths[3];
+  }
+
+  // Line items
+  const tbody = document.getElementById('prev-tbody');
+  tbody.innerHTML = '';
+  let subtotal = 0;
+  lineItems.forEach(item => {
+    const amt = item.qty * item.price;
+    subtotal += amt;
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${escHtml(item.desc) || '—'}</td>
+      <td style="text-align:right">${item.qty}</td>
+      <td style="text-align:right">${formatMoney(item.price)}</td>
+      <td style="text-align:right">${formatMoney(amt)}</td>`;
+    tbody.appendChild(tr);
+  });
+
+  const gstAmt = subtotal * gstRate / 100;
+  const total = subtotal + gstAmt;
+
+  // Preview totals
+  document.getElementById('prev-subtotal-lbl').textContent = t('generator.subtotalLbl');
+  document.getElementById('prev-subtotal').textContent = formatMoney(subtotal);
+  document.getElementById('prev-gst-lbl').textContent = `GST (${gstRate}%)`;
+  document.getElementById('prev-gst').textContent = formatMoney(gstAmt);
+  document.getElementById('prev-total-lbl').textContent = `Total ${curr}`;
+  document.getElementById('prev-total').textContent = formatMoney(total);
+
+  // Form totals
+  document.getElementById('calc-subtotal').textContent = formatMoney(subtotal);
+  document.getElementById('calc-gst-label').textContent = `GST (${gstRate}%)`;
+  document.getElementById('calc-gst').textContent = formatMoney(gstAmt);
+  document.getElementById('calc-total-label').textContent = `Total ${curr}`;
+  document.getElementById('calc-total').textContent = formatMoney(total);
+
+  // Bank details
+  const bankEl = document.getElementById('prev-bank');
+  if (bank) {
+    const bankLabel = currentLang === 'zh' ? '银行账号' : 'Bank Details';
+    bankEl.innerHTML = `<div class="doc-bank-label">${bankLabel}</div>${escHtml(bank)}`;
+    bankEl.style.display = 'block';
+  } else { bankEl.style.display = 'none'; }
+
+  // Notes
+  const notesEl = document.getElementById('prev-notes');
+  if (notes) { notesEl.style.display = 'block'; notesEl.textContent = notes; }
+  else { notesEl.style.display = 'none'; }
+
+  document.getElementById('prev-abn').textContent = abn ? `ABN ${abn}` : '';
+}
+
+// ─── ABN Validation (frontend format check + ABR API) ──
+let abnTimer = null;
+function handleABNInput(val) {
+  clearTimeout(abnTimer);
+  updatePreview();
+  const digits = val.replace(/\D/g, '');
+  const statusEl = document.getElementById('abn-status');
+  const resultEl = document.getElementById('abn-result');
+
+  if (digits.length === 0) {
+    statusEl.style.display = 'none';
+    resultEl.style.display = 'none';
+    return;
+  }
+  if (digits.length < 11) {
+    statusEl.className = 'abn-status'; statusEl.style.display = 'none';
+    resultEl.style.display = 'none';
+    return;
+  }
+  if (!validateABNFormat(digits)) {
+    statusEl.textContent = 'Invalid'; statusEl.className = 'abn-status invalid';
+    resultEl.style.display = 'none';
+    return;
+  }
+
+  statusEl.textContent = 'Checking…'; statusEl.className = 'abn-status checking';
+  resultEl.style.display = 'none';
+
+  // Debounced ABR lookup
+  abnTimer = setTimeout(() => lookupABN(digits), 600);
+}
+
+function validateABNFormat(digits) {
+  // Official ABN validation algorithm
+  const weights = [10, 1, 3, 5, 7, 9, 11, 13, 15, 17, 19];
+  const d = digits.split('').map(Number);
+  d[0] -= 1;
+  const sum = weights.reduce((acc, w, i) => acc + w * d[i], 0);
+  return sum % 89 === 0;
+}
+
+async function lookupABN(digits) {
+  const statusEl = document.getElementById('abn-status');
+  const resultEl = document.getElementById('abn-result');
+  try {
+    // Using ABR API proxy (CORS-friendly endpoint)
+    const url = `https://abr.business.gov.au/json/AbnDetails.aspx?abn=${digits}&callback=c`;
+    const res = await fetch(url);
+    const text = await res.text();
+    // Parse JSONP response: c({...})
+    const json = JSON.parse(text.replace(/^c\(/, '').replace(/\)$/, ''));
+
+    if (json.AbnStatus === 'Active') {
+      statusEl.textContent = 'Valid ✓'; statusEl.className = 'abn-status valid';
+      const name = json.EntityName || (json.BusinessName && json.BusinessName[0]?.OrganisationName) || '';
+      if (name) {
+        resultEl.textContent = `✓ ${name}`;
+        resultEl.style.display = 'block';
+        // Auto-fill business name if field is default
+        const fromField = document.getElementById('f-fromname');
+        if (fromField.value === 'Your Business Name' || fromField.value === '') {
+          fromField.value = name;
+          updatePreview();
+        }
+      }
+    } else {
+      statusEl.textContent = 'Not active'; statusEl.className = 'abn-status invalid';
+      resultEl.style.display = 'none';
+    }
+  } catch {
+    // Fallback: just show format as valid
+    statusEl.textContent = 'Valid ✓'; statusEl.className = 'abn-status valid';
+    resultEl.style.display = 'none';
+  }
+}
+
+// ─── Client ABN Validation ────────────────────────
+let clientAbnTimer = null;
+function handleClientABNInput(val) {
+  clearTimeout(clientAbnTimer);
+  updatePreview();
+  const digits = val.replace(/\D/g, '');
+  const statusEl = document.getElementById('client-abn-status');
+  const resultEl = document.getElementById('client-abn-result');
+
+  if (digits.length === 0) { statusEl.style.display = 'none'; resultEl.style.display = 'none'; return; }
+  if (digits.length < 11) { statusEl.style.display = 'none'; resultEl.style.display = 'none'; return; }
+  if (!validateABNFormat(digits)) {
+    statusEl.textContent = 'Invalid'; statusEl.className = 'abn-status invalid';
+    resultEl.style.display = 'none'; return;
+  }
+  statusEl.textContent = 'Checking…'; statusEl.className = 'abn-status checking';
+  resultEl.style.display = 'none';
+  clientAbnTimer = setTimeout(() => lookupClientABN(digits), 600);
+}
+
+async function lookupClientABN(digits) {
+  const statusEl = document.getElementById('client-abn-status');
+  const resultEl = document.getElementById('client-abn-result');
+  try {
+    const url = `https://abr.business.gov.au/json/AbnDetails.aspx?abn=${digits}&callback=c`;
+    const res = await fetch(url);
+    const text = await res.text();
+    const json = JSON.parse(text.replace(/^c\(/, '').replace(/\)$/, ''));
+    if (json.AbnStatus === 'Active') {
+      statusEl.textContent = 'Valid ✓'; statusEl.className = 'abn-status valid';
+      const name = json.EntityName || (json.BusinessName && json.BusinessName[0]?.OrganisationName) || '';
+      if (name) {
+        resultEl.textContent = `✓ ${name}`;
+        resultEl.style.display = 'block';
+        // Auto-fill client name if field is default
+        const toField = document.getElementById('f-toname');
+        if (toField.value === 'Client Company Pty Ltd' || toField.value === '') {
+          toField.value = name;
+          updatePreview();
+        }
+      }
+    } else {
+      statusEl.textContent = 'Not active'; statusEl.className = 'abn-status invalid';
+      resultEl.style.display = 'none';
+    }
+  } catch {
+    statusEl.textContent = 'Valid ✓'; statusEl.className = 'abn-status valid';
+    resultEl.style.display = 'none';
+  }
+}
+
+
+function generatePDF() {
+  const btn = document.getElementById('dl-btn');
+  btn.classList.add('loading');
+  btn.querySelector('span').textContent = currentLang === 'zh' ? '生成中…' : 'Generating…';
+
+  setTimeout(() => {
+    try {
+      buildPDF();
+    } catch(e) {
+      showToast(currentLang === 'zh' ? '生成失败，请重试' : 'Failed to generate PDF. Please try again.');
+    }
+    btn.classList.remove('loading');
+    btn.querySelector('span').textContent = t('generator.download');
+  }, 100);
+}
+
+function buildPDF() {
+  const tpl = currentTemplate;
+  if (tpl === 'bold') return buildPDF_Bold();
+  if (tpl === 'minimal') return buildPDF_Minimal();
+  return buildPDF_Classic();
+}
+
+function buildPDF_Classic() {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+
+  const curr = getCurr();
+  const gstRate = getGST();
+  const sym = getSym();
+
+  const fromName = document.getElementById('f-fromname').value || 'Your Business';
+  const fromDetail = document.getElementById('f-fromdetail').value || '';
+  const toName = document.getElementById('f-toname').value || 'Client';
+  const toDetail = document.getElementById('f-todetail').value || '';
+  const invNum = document.getElementById('f-invnum').value || '';
+  const abn = document.getElementById('f-abn').value || '';
+  const bank = (document.getElementById('f-bank') || {}).value || '';
+  const notes = document.getElementById('f-notes').value || '';
+  const dateVal = document.getElementById('f-date').value;
+  const dueDateVal = document.getElementById('f-duedate').value;
+
+  function fmtDate(v) {
+    if (!v) return '';
+    const d = new Date(v + 'T00:00:00');
+    return d.toLocaleDateString('en-AU', { day: '2-digit', month: 'short', year: 'numeric' });
+  }
+
+  const pageW = 210, pageH = 297;
+  const ml = 18, mr = 18, mt = 20;
+  let y = mt;
+  const contentW = pageW - ml - mr;
+
+  // Accent bar at top
+  doc.setFillColor(30, 107, 71);
+  doc.rect(0, 0, pageW, 4, 'F');
+
+  // Header: Brand name (left) + TAX INVOICE (right)
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(18);
+  doc.setTextColor(12, 11, 10);
+  y = 20;
+  doc.text(fromName, ml, y);
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(11);
+  doc.setTextColor(30, 107, 71);
+  const invLabelTxt = currentLang === 'zh' ? '税务发票' : 'TAX INVOICE';
+  doc.text(invLabelTxt, pageW - mr, y, { align: 'right' });
+
+  y += 5;
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  doc.setTextColor(100, 100, 95);
+  if (fromDetail) doc.text(fromDetail, ml, y);
+
+  doc.setFontSize(9);
+  doc.setTextColor(12, 11, 10);
+  doc.text('#' + invNum, pageW - mr, y, { align: 'right' });
+  y += 4.5;
+
+  if (abn) {
+    doc.setFontSize(8.5);
+    doc.setTextColor(100, 100, 95);
+    doc.text(`ABN ${abn}`, ml, y);
+  }
+  if (dateVal) {
+    doc.setTextColor(100, 100, 95);
+    doc.text(fmtDate(dateVal), pageW - mr, y, { align: 'right' });
+    y += 4;
+    if (dueDateVal) {
+      doc.text(`Due: ${fmtDate(dueDateVal)}`, pageW - mr, y, { align: 'right' });
+    }
+  }
+
+  // Divider
+  y += 6;
+  doc.setDrawColor(200, 200, 195);
+  doc.setLineWidth(0.3);
+  doc.line(ml, y, pageW - mr, y);
+  y += 8;
+
+  // Parties row
+  const colW = contentW / 2;
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(7.5);
+  doc.setTextColor(130, 130, 125);
+  const fromLabel = currentLang === 'zh' ? '发票方' : 'FROM';
+  const toLabel = currentLang === 'zh' ? '收款方' : 'BILL TO';
+  doc.text(fromLabel, ml, y);
+  doc.text(toLabel, ml + colW + 6, y);
+
+  y += 4.5;
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(10);
+  doc.setTextColor(12, 11, 10);
+  doc.text(fromName, ml, y);
+  doc.text(toName, ml + colW + 6, y);
+
+  y += 4;
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8.5);
+  doc.setTextColor(74, 72, 69);
+  if (fromDetail) doc.text(fromDetail, ml, y);
+  if (toDetail) doc.text(toDetail, ml + colW + 6, y);
+  if (clientAbn) {
+    y += 4;
+    doc.setFontSize(8);
+    doc.setTextColor(100, 100, 95);
+    doc.text(`ABN ${clientAbn}`, ml + colW + 6, y);
+  }
+
+  // Table
+  y += 12;
+  doc.setFillColor(244, 242, 238);
+  doc.rect(ml, y - 3, contentW, 7, 'F');
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(7.5);
+  doc.setTextColor(90, 90, 86);
+
+  const cols = {
+    desc: ml + 2,
+    qty: ml + contentW * 0.52,
+    rate: ml + contentW * 0.67,
+    amount: pageW - mr - 2
+  };
+
+  const descHeader = currentLang === 'zh' ? '描述' : 'DESCRIPTION';
+  const qtyHeader = currentLang === 'zh' ? '数量' : 'QTY';
+  const rateHeader = currentLang === 'zh' ? '单价' : 'RATE';
+  const amtHeader = currentLang === 'zh' ? '金额' : 'AMOUNT';
+
+  doc.text(descHeader, cols.desc, y + 1.5);
+  doc.text(qtyHeader, cols.qty, y + 1.5);
+  doc.text(rateHeader, cols.rate, y + 1.5);
+  doc.text(amtHeader, cols.amount, y + 1.5, { align: 'right' });
+  y += 7;
+
+  let subtotal = 0;
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+
+  lineItems.forEach((item, idx) => {
+    const amt = item.qty * item.price;
+    subtotal += amt;
+
+    if (idx % 2 === 1) {
+      doc.setFillColor(250, 249, 247);
+      doc.rect(ml, y - 3.5, contentW, 7, 'F');
+    }
+
+    doc.setTextColor(12, 11, 10);
+    const descLines = doc.splitTextToSize(item.desc || '—', contentW * 0.48);
+    doc.text(descLines[0], cols.desc, y);
+    doc.setTextColor(74, 72, 69);
+    doc.text(String(item.qty), cols.qty, y);
+    doc.text(sym + item.price.toFixed(2), cols.rate, y);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(12, 11, 10);
+    doc.text(sym + amt.toFixed(2), cols.amount, y, { align: 'right' });
+    doc.setFont('helvetica', 'normal');
+    y += 7;
+  });
+
+  // Totals
+  y += 4;
+  doc.setDrawColor(200, 200, 195);
+  doc.line(ml + contentW * 0.55, y, pageW - mr, y);
+  y += 5;
+
+  function totRow(label, val, bold) {
+    doc.setFont('helvetica', bold ? 'bold' : 'normal');
+    doc.setFontSize(bold ? 10 : 9);
+    doc.setTextColor(bold ? 12 : 74, bold ? 11 : 72, bold ? 10 : 69);
+    doc.text(label, pageW - mr - 40, y);
+    doc.text(val, pageW - mr, y, { align: 'right' });
+    y += bold ? 6 : 5;
+  }
+
+  const gstAmt = subtotal * gstRate / 100;
+  const total = subtotal + gstAmt;
+
+  const subLbl = currentLang === 'zh' ? '小计' : 'Subtotal';
+  const gstLbl = `GST (${gstRate}%)`;
+  const totLbl = currentLang === 'zh' ? `总计 ${curr}` : `Total ${curr}`;
+
+  totRow(subLbl, sym + subtotal.toFixed(2), false);
+  if (gstRate > 0) totRow(gstLbl, sym + gstAmt.toFixed(2), false);
+  doc.setDrawColor(200, 200, 195);
+  doc.line(pageW - mr - 50, y, pageW - mr, y);
+  y += 2;
+  totRow(totLbl, sym + total.toFixed(2), true);
+
+  // Bank Details block
+  if (bank) {
+    y += 8;
+    doc.setDrawColor(200, 200, 195);
+    doc.line(ml, y, pageW - mr, y);
+    y += 6;
+    const bankLabel = currentLang === 'zh' ? '银行账号' : 'Bank Details';
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8);
+    doc.setTextColor(30, 107, 71);
+    doc.text(bankLabel, ml, y);
+    y += 4;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8.5);
+    doc.setTextColor(74, 72, 69);
+    const bankLines = doc.splitTextToSize(bank, contentW);
+    doc.text(bankLines, ml, y);
+    y += bankLines.length * 4.5;
+  }
+
+  // Notes block
+  if (notes) {
+    y += bank ? 4 : 8;
+    if (!bank) {
+      doc.setDrawColor(200, 200, 195);
+      doc.line(ml, y, pageW - mr, y);
+      y += 6;
+    }
+    const notesLabel = currentLang === 'zh' ? '备注：' : 'Notes:';
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8);
+    doc.setTextColor(100, 100, 95);
+    doc.text(notesLabel, ml, y);
+    y += 4;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8.5);
+    doc.setTextColor(74, 72, 69);
+    const notesLines = doc.splitTextToSize(notes, contentW);
+    doc.text(notesLines, ml, y);
+  }
+
+  // Footer
+  const footerY = pageH - 14;
+  doc.setDrawColor(30, 107, 71);
+  doc.setLineWidth(0.4);
+  doc.line(ml, footerY - 2, pageW - mr, footerY - 2);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7.5);
+  doc.setTextColor(130, 130, 125);
+  const gstNote = gstRate > 0
+    ? (currentLang === 'zh' ? `GST 已注册 · ABN ${abn || '—'}` : `GST Registered · ABN ${abn || '—'} · Tax Invoice per ATO requirements`)
+    : (currentLang === 'zh' ? `ABN ${abn || '—'}` : `ABN ${abn || '—'} · invoicenow.me`);
+  doc.text(gstNote, ml, footerY);
+  doc.text('invoicenow.me', pageW - mr, footerY, { align: 'right' });
+
+  // Save
+  const filename = `Invoice-${invNum || 'draft'}-${fromName.replace(/\s+/g,'-')}-classic.pdf`;
+  doc.save(filename);
+  showToast(currentLang === 'zh' ? '✓ PDF 已下载' : '✓ PDF downloaded');
+}
+
+/* ── Bold PDF (dark navy + amber accent) ─────────── */
+function buildPDF_Bold() {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  const curr = getCurr(), gstRate = getGST(), sym = getSym();
+  const fromName = document.getElementById('f-fromname').value || 'Your Business';
+  const fromDetail = document.getElementById('f-fromdetail').value || '';
+  const toName = document.getElementById('f-toname').value || 'Client';
+  const toDetail = document.getElementById('f-todetail').value || '';
+  const invNum = document.getElementById('f-invnum').value || '';
+  const abn = document.getElementById('f-abn').value || '';
+  const notes = document.getElementById('f-notes').value || '';
+  const dateVal = document.getElementById('f-date').value;
+  const dueDateVal = document.getElementById('f-duedate').value;
+  function fmtDate(v) { if (!v) return ''; return new Date(v+'T00:00:00').toLocaleDateString('en-AU',{day:'2-digit',month:'short',year:'numeric'}); }
+  const pageW=210, pageH=297, ml=18, mr=18, contentW=174;
+  let y=0;
+
+  // Dark bg + amber sidebar
+  doc.setFillColor(15,25,35); doc.rect(0,0,pageW,pageH,'F');
+  doc.setFillColor(200,135,58); doc.rect(0,0,5,pageH,'F');
+  doc.setFillColor(22,35,50); doc.rect(5,0,pageW-5,54,'F');
+
+  y=22;
+  doc.setFont('helvetica','bold'); doc.setFontSize(20); doc.setTextColor(240,237,232);
+  doc.text(fromName, ml+4, y);
+  doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(200,135,58);
+  const invLbl = currentLang==='zh'?'税务发票':'TAX INVOICE';
+  doc.text(invLbl, pageW-mr, y, {align:'right'});
+  y+=5;
+  doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(155,150,145);
+  if (fromDetail) doc.text(fromDetail, ml+4, y);
+  doc.setTextColor(200,200,195);
+  doc.text('#'+invNum, pageW-mr, y, {align:'right'});
+  y+=4;
+  if (abn) { doc.setFontSize(8); doc.setTextColor(130,125,120); doc.text(`ABN ${abn}`, ml+4, y); }
+  const dStr=fmtDate(dateVal), ddStr=fmtDate(dueDateVal);
+  if (dStr) { doc.setTextColor(140,135,130); doc.text(dStr, pageW-mr, y, {align:'right'}); y+=4; }
+  if (ddStr) { doc.setFontSize(8.5); doc.text(`Due: ${ddStr}`, pageW-mr, y, {align:'right'}); }
+
+  y=60;
+  const halfW=contentW/2;
+  doc.setFont('helvetica','bold'); doc.setFontSize(7); doc.setTextColor(120,115,110);
+  doc.text(currentLang==='zh'?'发票方':'FROM', ml+4, y);
+  doc.text(currentLang==='zh'?'收款方':'BILL TO', ml+4+halfW+4, y);
+  y+=5;
+  doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(240,237,232);
+  doc.text(fromName, ml+4, y); doc.text(toName, ml+4+halfW+4, y);
+  y+=4.5;
+  doc.setFont('helvetica','normal'); doc.setFontSize(8.5); doc.setTextColor(155,150,145);
+  if (fromDetail) doc.text(fromDetail, ml+4, y);
+  if (toDetail) doc.text(toDetail, ml+4+halfW+4, y);
+  y+=12;
+
+  // Table header
+  doc.setFillColor(30,45,62); doc.rect(5,y-3,pageW-5,8,'F');
+  const cols={desc:ml+4, qty:ml+contentW*0.52, rate:ml+contentW*0.67, amount:pageW-mr-2};
+  doc.setFont('helvetica','bold'); doc.setFontSize(7.5); doc.setTextColor(200,135,58);
+  doc.text(currentLang==='zh'?'描述':'DESCRIPTION', cols.desc, y+2);
+  doc.text(currentLang==='zh'?'数量':'QTY', cols.qty, y+2);
+  doc.text(currentLang==='zh'?'单价':'RATE', cols.rate, y+2);
+  doc.text(currentLang==='zh'?'金额':'AMOUNT', cols.amount, y+2, {align:'right'});
+  y+=8;
+
+  let subtotal=0;
+  doc.setFont('helvetica','normal'); doc.setFontSize(9);
+  lineItems.forEach((item,idx)=>{
+    const amt=item.qty*item.price; subtotal+=amt;
+    if (idx%2===0) { doc.setFillColor(20,32,45); doc.rect(5,y-3.5,pageW-5,7.5,'F'); }
+    doc.setTextColor(220,218,215);
+    doc.text(doc.splitTextToSize(item.desc||'—',contentW*0.46)[0], cols.desc, y);
+    doc.setTextColor(160,155,150);
+    doc.text(String(item.qty),cols.qty,y); doc.text(sym+item.price.toFixed(2),cols.rate,y);
+    doc.setFont('helvetica','bold'); doc.setTextColor(240,237,232);
+    doc.text(sym+amt.toFixed(2),cols.amount,y,{align:'right'});
+    doc.setFont('helvetica','normal'); y+=7;
+  });
+
+  y+=4;
+  doc.setDrawColor(200,135,58); doc.setLineWidth(0.4);
+  doc.line(pageW-mr-55,y,pageW-mr,y); y+=5;
+  const gstAmt=subtotal*gstRate/100, total=subtotal+gstAmt;
+  doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(155,150,145);
+  doc.text(currentLang==='zh'?'小计':'Subtotal',pageW-mr-45,y);
+  doc.text(sym+subtotal.toFixed(2),pageW-mr,y,{align:'right'}); y+=5;
+  if (gstRate>0) { doc.text(`GST (${gstRate}%)`,pageW-mr-45,y); doc.text(sym+gstAmt.toFixed(2),pageW-mr,y,{align:'right'}); y+=5; }
+  doc.setDrawColor(80,100,120); doc.setLineWidth(0.3);
+  doc.line(pageW-mr-55,y,pageW-mr,y); y+=3;
+  doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(240,237,232);
+  doc.text(currentLang==='zh'?`总计 ${curr}`:`Total ${curr}`,pageW-mr-50,y+4);
+  doc.text(sym+total.toFixed(2),pageW-mr,y+4,{align:'right'});
+
+  if (notes) {
+    y+=14;
+    doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(200,135,58);
+    doc.text(currentLang==='zh'?'备注：':'Notes:', ml+4, y); y+=5;
+    doc.setFont('helvetica','normal'); doc.setFontSize(8.5); doc.setTextColor(155,150,145);
+    doc.text(doc.splitTextToSize(notes,contentW), ml+4, y);
+  }
+
+  const fY=pageH-12;
+  doc.setFillColor(22,35,50); doc.rect(5,fY-5,pageW-5,17,'F');
+  doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(100,95,90);
+  const gN=gstRate>0?(currentLang==='zh'?`GST已注册 · ABN ${abn||'—'}`:`GST Registered · ABN ${abn||'—'}`):`ABN ${abn||'—'}`;
+  doc.text(gN, ml+4, fY); doc.text('invoicenow.me', pageW-mr, fY, {align:'right'});
+
+  doc.save(`Invoice-${invNum||'draft'}-${fromName.replace(/\s+/g,'-')}-bold.pdf`);
+  showToast(currentLang==='zh'?'✓ PDF 已下载':'✓ PDF downloaded');
+}
+
+/* ── Minimal PDF (stark black & white) ──────────── */
+function buildPDF_Minimal() {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  const curr = getCurr(), gstRate = getGST(), sym = getSym();
+  const fromName = document.getElementById('f-fromname').value || 'Your Business';
+  const fromDetail = document.getElementById('f-fromdetail').value || '';
+  const toName = document.getElementById('f-toname').value || 'Client';
+  const toDetail = document.getElementById('f-todetail').value || '';
+  const invNum = document.getElementById('f-invnum').value || '';
+  const abn = document.getElementById('f-abn').value || '';
+  const notes = document.getElementById('f-notes').value || '';
+  const dateVal = document.getElementById('f-date').value;
+  const dueDateVal = document.getElementById('f-duedate').value;
+  function fmtDate(v) { if (!v) return ''; return new Date(v+'T00:00:00').toLocaleDateString('en-AU',{day:'2-digit',month:'short',year:'numeric'}); }
+  const pageW=210, pageH=297, ml=18, mr=18, contentW=174;
+  let y=24;
+
+  // Big brand
+  doc.setFont('helvetica','bold'); doc.setFontSize(24); doc.setTextColor(12,11,10);
+  doc.text(fromName, ml, y);
+  y+=7;
+  doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(100,100,95);
+  if (fromDetail) doc.text(fromDetail, ml, y);
+  if (abn) { y+=4.5; doc.text(`ABN ${abn}`, ml, y); }
+
+  // Right block
+  const hY=24;
+  doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(12,11,10);
+  doc.text(currentLang==='zh'?'税务发票':'TAX INVOICE', pageW-mr, hY, {align:'right'});
+  doc.setFont('helvetica','normal'); doc.setFontSize(11); doc.setTextColor(12,11,10);
+  doc.text('#'+invNum, pageW-mr, hY+7, {align:'right'});
+  doc.setFontSize(8.5); doc.setTextColor(120,118,115);
+  const dStr=fmtDate(dateVal), ddStr=fmtDate(dueDateVal);
+  if (dStr) doc.text(dStr, pageW-mr, hY+13, {align:'right'});
+  if (ddStr) doc.text(`Due: ${ddStr}`, pageW-mr, hY+19, {align:'right'});
+
+  // Bold divider
+  y=46;
+  doc.setDrawColor(12,11,10); doc.setLineWidth(1.5);
+  doc.line(ml,y,pageW-mr,y); y+=10;
+
+  // Parties
+  const halfW=contentW/2;
+  doc.setFont('helvetica','bold'); doc.setFontSize(7.5); doc.setTextColor(130,128,125);
+  doc.text(currentLang==='zh'?'发票方':'FROM', ml, y);
+  doc.text(currentLang==='zh'?'收款方':'BILL TO', ml+halfW+4, y); y+=5;
+  doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(12,11,10);
+  doc.text(fromName, ml, y); doc.text(toName, ml+halfW+4, y); y+=4.5;
+  doc.setFont('helvetica','normal'); doc.setFontSize(8.5); doc.setTextColor(90,88,86);
+  if (fromDetail) doc.text(fromDetail, ml, y);
+  if (toDetail) doc.text(toDetail, ml+halfW+4, y);
+  y+=12;
+
+  // Thin divider
+  doc.setDrawColor(180,178,175); doc.setLineWidth(0.4);
+  doc.line(ml,y,pageW-mr,y); y+=8;
+
+  // Table
+  const cols={desc:ml, qty:ml+contentW*0.52, rate:ml+contentW*0.67, amount:pageW-mr};
+  doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(12,11,10);
+  doc.text(currentLang==='zh'?'描述':'Description', cols.desc, y);
+  doc.text(currentLang==='zh'?'数量':'Qty', cols.qty, y);
+  doc.text(currentLang==='zh'?'单价':'Rate', cols.rate, y);
+  doc.text(currentLang==='zh'?'金额':'Amount', cols.amount, y, {align:'right'});
+  y+=3;
+  doc.setDrawColor(12,11,10); doc.setLineWidth(0.8);
+  doc.line(ml,y,pageW-mr,y); y+=7;
+
+  let subtotal=0;
+  doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(12,11,10);
+  lineItems.forEach(item=>{
+    const amt=item.qty*item.price; subtotal+=amt;
+    doc.text(doc.splitTextToSize(item.desc||'—',contentW*0.46)[0], cols.desc, y);
+    doc.setTextColor(80,78,76);
+    doc.text(String(item.qty),cols.qty,y); doc.text(sym+item.price.toFixed(2),cols.rate,y);
+    doc.setFont('helvetica','bold'); doc.setTextColor(12,11,10);
+    doc.text(sym+amt.toFixed(2),cols.amount,y,{align:'right'});
+    doc.setFont('helvetica','normal'); doc.setTextColor(12,11,10);
+    y+=7;
+    doc.setDrawColor(210,208,205); doc.setLineWidth(0.3);
+    doc.line(ml,y-2,pageW-mr,y-2);
+  });
+
+  y+=5;
+  const gstAmt=subtotal*gstRate/100, total=subtotal+gstAmt;
+  doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(100,98,95);
+  doc.text(currentLang==='zh'?'小计':'Subtotal',pageW-mr-42,y);
+  doc.text(sym+subtotal.toFixed(2),pageW-mr,y,{align:'right'}); y+=5;
+  if (gstRate>0) {
+    doc.text(`GST (${gstRate}%)`,pageW-mr-42,y);
+    doc.text(sym+gstAmt.toFixed(2),pageW-mr,y,{align:'right'}); y+=5;
+  }
+  doc.setDrawColor(12,11,10); doc.setLineWidth(1.2);
+  doc.line(pageW-mr-52,y,pageW-mr,y); y+=5;
+  doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(12,11,10);
+  doc.text(currentLang==='zh'?`总计 ${curr}`:`Total ${curr}`,pageW-mr-50,y);
+  doc.text(sym+total.toFixed(2),pageW-mr,y,{align:'right'});
+
+  if (notes) {
+    y+=14;
+    doc.setDrawColor(180,178,175); doc.setLineWidth(0.3);
+    doc.line(ml,y-4,pageW-mr,y-4);
+    doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(120,118,115);
+    doc.text(currentLang==='zh'?'备注：':'Notes:', ml, y); y+=5;
+    doc.setFont('helvetica','normal'); doc.setFontSize(8.5); doc.setTextColor(80,78,76);
+    doc.text(doc.splitTextToSize(notes,contentW), ml, y);
+  }
+
+  const fY=pageH-14;
+  doc.setDrawColor(12,11,10); doc.setLineWidth(0.8);
+  doc.line(ml,fY-3,pageW-mr,fY-3);
+  doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(130,128,125);
+  const gN=gstRate>0?(currentLang==='zh'?`GST已注册 · ABN ${abn||'—'}`:`GST Registered · ABN ${abn||'—'}`):`ABN ${abn||'—'}`;
+  doc.text(gN, ml, fY); doc.text('invoicenow.me', pageW-mr, fY, {align:'right'});
+
+  doc.save(`Invoice-${invNum||'draft'}-${fromName.replace(/\s+/g,'-')}-minimal.pdf`);
+  showToast(currentLang==='zh'?'✓ PDF 已下载':'✓ PDF downloaded');
+}
+
+// ─── Template state ───────────────────────────────
+let currentTemplate = 'classic';
+
+function setTemplate(tpl) {
+  currentTemplate = tpl;
+  // Update card states
+  document.querySelectorAll('.tpl-card').forEach(c => {
+    const isActive = c.getAttribute('data-tpl') === tpl;
+    c.classList.toggle('active', isActive);
+    c.setAttribute('aria-pressed', isActive);
+  });
+  // Update preview doc classes
+  const doc = document.getElementById('preview-doc');
+  doc.className = 'invoice-doc';
+  if (tpl !== 'classic') doc.classList.add('tpl-' + tpl);
+}
+
+// Keyboard support for template cards
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && e.target.classList.contains('tpl-card')) {
+    setTemplate(e.target.getAttribute('data-tpl'));
+  }
+});
+
+
+function toggleFaq(el) {
+  const item = el.parentElement;
+  const isOpen = item.classList.contains('open');
+  document.querySelectorAll('.faq-item.open').forEach(i => {
+    i.classList.remove('open');
+    i.querySelector('.faq-q').setAttribute('aria-expanded', 'false');
+  });
+  if (!isOpen) {
+    item.classList.add('open');
+    el.setAttribute('aria-expanded', 'true');
+  }
+}
+
+// Keyboard support for FAQ
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && e.target.classList.contains('faq-q')) toggleFaq(e.target);
+});
+
+// ─── Navbar scroll effect ─────────────────────────
+window.addEventListener('scroll', () => {
+  document.getElementById('navbar').classList.toggle('scrolled', window.scrollY > 10);
+}, { passive: true });
+
+// ─── Intersection observer for fade-in ───────────
+const io = new IntersectionObserver(entries => {
+  entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); io.unobserve(e.target); } });
+}, { threshold: 0.1 });
+document.querySelectorAll('.fade-in').forEach(el => io.observe(el));
+
+// ─── Toast ────────────────────────────────────────
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// ─── Mobile nav ───────────────────────────────────
+function toggleMobileNav() {
+  // Simple implementation - could be expanded
+  const links = document.querySelector('.nav-links');
+  const btn = document.querySelector('.btn-nav');
+}
+
+// ─── Init ─────────────────────────────────────────
+function init() {
+  // Set default dates
+  const now = new Date();
+  const fmt = d => d.toISOString().split('T')[0];
+  const due = new Date(now); due.setDate(due.getDate() + 30);
+  document.getElementById('f-date').value = fmt(now);
+  document.getElementById('f-duedate').value = fmt(due);
+
+  renderItems();
+  updatePreview();
+}
+
+init();
+</script>
+</body>
+</html>
