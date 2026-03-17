@@ -1754,6 +1754,7 @@ function buildPDF_Classic() {
   const toDetail = document.getElementById('f-todetail').value || '';
   const invNum = document.getElementById('f-invnum').value || '';
   const abn = document.getElementById('f-abn').value || '';
+  const clientAbn = (document.getElementById('f-clientabn') || {}).value || '';
   const bank = (document.getElementById('f-bank') || {}).value || '';
   const notes = document.getElementById('f-notes').value || '';
   const dateVal = document.getElementById('f-date').value;
