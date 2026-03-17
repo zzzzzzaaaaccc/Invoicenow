@@ -1740,488 +1740,472 @@ function buildPDF() {
   return buildPDF_Classic();
 }
 
-function buildPDF_Classic() {
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+/* ─── Shared data reader ────────────────────────────
+   Called by all three PDF builders. Returns one object
+   with every field the user can fill in.               */
+function getPDFData() {
+  const g = id => (document.getElementById(id) || {}).value || '';
+  const curr = getCurr(), gstRate = getGST(), sym = getSym();
 
-  const curr = getCurr();
-  const gstRate = getGST();
-  const sym = getSym();
-
-  const fromName = document.getElementById('f-fromname').value || 'Your Business';
-  const fromDetail = document.getElementById('f-fromdetail').value || '';
-  const toName = document.getElementById('f-toname').value || 'Client';
-  const toDetail = document.getElementById('f-todetail').value || '';
-  const invNum = document.getElementById('f-invnum').value || '';
-  const abn = document.getElementById('f-abn').value || '';
-  const clientAbn = (document.getElementById('f-clientabn') || {}).value || '';
-  const bank = (document.getElementById('f-bank') || {}).value || '';
-  const notes = document.getElementById('f-notes').value || '';
-  const dateVal = document.getElementById('f-date').value;
-  const dueDateVal = document.getElementById('f-duedate').value;
+  const fromName   = g('f-fromname')  || 'Your Business';
+  const fromDetail = g('f-fromdetail');
+  const abn        = g('f-abn');
+  const toName     = g('f-toname')    || 'Client';
+  const toDetail   = g('f-todetail');
+  const clientAbn  = g('f-clientabn');
+  const invNum     = g('f-invnum')    || 'DRAFT';
+  const bank       = g('f-bank');
+  const notes      = g('f-notes');
+  const dateVal    = g('f-date');
+  const dueDateVal = g('f-duedate');
 
   function fmtDate(v) {
     if (!v) return '';
-    const d = new Date(v + 'T00:00:00');
-    return d.toLocaleDateString('en-AU', { day: '2-digit', month: 'short', year: 'numeric' });
+    return new Date(v + 'T00:00:00').toLocaleDateString(
+      currentLang === 'zh' ? 'zh-CN' : 'en-AU',
+      { day: '2-digit', month: 'short', year: 'numeric' }
+    );
   }
 
-  const pageW = 210, pageH = 297;
-  const ml = 18, mr = 18, mt = 20;
-  let y = mt;
-  const contentW = pageW - ml - mr;
+  let subtotal = 0;
+  const rows = lineItems.map(item => {
+    const amt = item.qty * item.price;
+    subtotal += amt;
+    return { desc: item.desc || '—', qty: item.qty, price: item.price, amt };
+  });
+  const gstAmt = subtotal * gstRate / 100;
+  const total  = subtotal + gstAmt;
 
-  // Accent bar at top
+  const invLabel  = currentLang === 'zh' ? '税务发票' : 'TAX INVOICE';
+  const fromLabel = currentLang === 'zh' ? '发票方'   : 'FROM';
+  const toLabel   = currentLang === 'zh' ? '收款方'   : 'BILL TO';
+  const descLbl   = currentLang === 'zh' ? '描述'     : 'DESCRIPTION';
+  const qtyLbl    = currentLang === 'zh' ? '数量'     : 'QTY';
+  const rateLbl   = currentLang === 'zh' ? '单价'     : 'RATE';
+  const amtLbl    = currentLang === 'zh' ? '金额'     : 'AMOUNT';
+  const subLbl    = currentLang === 'zh' ? '小计'     : 'Subtotal';
+  const totLbl    = currentLang === 'zh' ? `总计 ${curr}` : `Total ${curr}`;
+  const notesLbl  = currentLang === 'zh' ? '备注'     : 'Notes';
+  const bankLbl   = currentLang === 'zh' ? '银行账号' : 'Bank Details';
+  const abnLbl    = currentLang === 'zh' ? 'ABN 已注册' : 'GST Registered';
+
+  return {
+    curr, gstRate, sym,
+    fromName, fromDetail, abn,
+    toName, toDetail, clientAbn,
+    invNum, bank, notes,
+    date: fmtDate(dateVal), dueDate: fmtDate(dueDateVal),
+    rows, subtotal, gstAmt, total,
+    invLabel, fromLabel, toLabel,
+    descLbl, qtyLbl, rateLbl, amtLbl,
+    subLbl, totLbl, notesLbl, bankLbl, abnLbl
+  };
+}
+
+/* ─── Classic PDF ───────────────────────────────────
+   White paper · green top bar · Playfair-style header  */
+function buildPDF_Classic() {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  const d = getPDFData();
+
+  const pageW = 210, pageH = 297, ml = 18, mr = 18, contentW = 174;
+  let y = 20;
+
+  // Green top bar
   doc.setFillColor(30, 107, 71);
   doc.rect(0, 0, pageW, 4, 'F');
 
-  // Header: Brand name (left) + TAX INVOICE (right)
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(18);
-  doc.setTextColor(12, 11, 10);
-  y = 20;
-  doc.text(fromName, ml, y);
+  // Header left: business name + detail + abn
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(18); doc.setTextColor(12, 11, 10);
+  doc.text(d.fromName, ml, y);
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(100, 100, 95);
+  if (d.fromDetail) { y += 5; doc.text(d.fromDetail, ml, y); }
+  if (d.abn)        { y += 4.5; doc.text(`ABN ${d.abn}`, ml, y); }
 
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(11);
-  doc.setTextColor(30, 107, 71);
-  const invLabelTxt = currentLang === 'zh' ? '税务发票' : 'TAX INVOICE';
-  doc.text(invLabelTxt, pageW - mr, y, { align: 'right' });
-
-  y += 5;
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(9);
-  doc.setTextColor(100, 100, 95);
-  if (fromDetail) doc.text(fromDetail, ml, y);
-
-  doc.setFontSize(9);
-  doc.setTextColor(12, 11, 10);
-  doc.text('#' + invNum, pageW - mr, y, { align: 'right' });
-  y += 4.5;
-
-  if (abn) {
-    doc.setFontSize(8.5);
-    doc.setTextColor(100, 100, 95);
-    doc.text(`ABN ${abn}`, ml, y);
+  // Header right: label + inv number + dates
+  let hy = 20;
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.setTextColor(30, 107, 71);
+  doc.text(d.invLabel, pageW - mr, hy, { align: 'right' });
+  hy += 5;
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(13); doc.setTextColor(12, 11, 10);
+  doc.text(`#${d.invNum}`, pageW - mr, hy, { align: 'right' });
+  if (d.date) {
+    hy += 5; doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(100, 100, 95);
+    doc.text(d.date, pageW - mr, hy, { align: 'right' });
   }
-  if (dateVal) {
-    doc.setTextColor(100, 100, 95);
-    doc.text(fmtDate(dateVal), pageW - mr, y, { align: 'right' });
-    y += 4;
-    if (dueDateVal) {
-      doc.text(`Due: ${fmtDate(dueDateVal)}`, pageW - mr, y, { align: 'right' });
-    }
+  if (d.dueDate) {
+    hy += 4.5; doc.text(`Due: ${d.dueDate}`, pageW - mr, hy, { align: 'right' });
   }
 
   // Divider
-  y += 6;
-  doc.setDrawColor(200, 200, 195);
-  doc.setLineWidth(0.3);
-  doc.line(ml, y, pageW - mr, y);
-  y += 8;
+  y = Math.max(y, hy) + 7;
+  doc.setDrawColor(200, 200, 195); doc.setLineWidth(0.3);
+  doc.line(ml, y, pageW - mr, y); y += 8;
 
-  // Parties row
+  // Parties
   const colW = contentW / 2;
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(7.5);
-  doc.setTextColor(130, 130, 125);
-  const fromLabel = currentLang === 'zh' ? '发票方' : 'FROM';
-  const toLabel = currentLang === 'zh' ? '收款方' : 'BILL TO';
-  doc.text(fromLabel, ml, y);
-  doc.text(toLabel, ml + colW + 6, y);
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(7.5); doc.setTextColor(130, 130, 125);
+  doc.text(d.fromLabel, ml, y);
+  doc.text(d.toLabel, ml + colW + 6, y); y += 4.5;
 
-  y += 4.5;
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(10);
-  doc.setTextColor(12, 11, 10);
-  doc.text(fromName, ml, y);
-  doc.text(toName, ml + colW + 6, y);
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(12, 11, 10);
+  doc.text(d.fromName, ml, y);
+  doc.text(d.toName, ml + colW + 6, y); y += 4;
 
-  y += 4;
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(8.5);
-  doc.setTextColor(74, 72, 69);
-  if (fromDetail) doc.text(fromDetail, ml, y);
-  if (toDetail) doc.text(toDetail, ml + colW + 6, y);
-  if (clientAbn) {
-    y += 4;
-    doc.setFontSize(8);
-    doc.setTextColor(100, 100, 95);
-    doc.text(`ABN ${clientAbn}`, ml + colW + 6, y);
-  }
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor(74, 72, 69);
+  const leftY = y, rightY = y;
+  let ly = leftY, ry = rightY;
+  if (d.fromDetail) { doc.text(d.fromDetail, ml, ly); ly += 4.5; }
+  if (d.abn)        { doc.text(`ABN ${d.abn}`, ml, ly); ly += 4.5; }
+  if (d.toDetail)   { doc.text(d.toDetail, ml + colW + 6, ry); ry += 4.5; }
+  if (d.clientAbn)  { doc.text(`ABN ${d.clientAbn}`, ml + colW + 6, ry); ry += 4.5; }
+  y = Math.max(ly, ry) + 6;
 
-  // Table
-  y += 12;
+  // Table header
   doc.setFillColor(244, 242, 238);
   doc.rect(ml, y - 3, contentW, 7, 'F');
-
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(7.5);
-  doc.setTextColor(90, 90, 86);
-
-  const cols = {
-    desc: ml + 2,
-    qty: ml + contentW * 0.52,
-    rate: ml + contentW * 0.67,
-    amount: pageW - mr - 2
-  };
-
-  const descHeader = currentLang === 'zh' ? '描述' : 'DESCRIPTION';
-  const qtyHeader = currentLang === 'zh' ? '数量' : 'QTY';
-  const rateHeader = currentLang === 'zh' ? '单价' : 'RATE';
-  const amtHeader = currentLang === 'zh' ? '金额' : 'AMOUNT';
-
-  doc.text(descHeader, cols.desc, y + 1.5);
-  doc.text(qtyHeader, cols.qty, y + 1.5);
-  doc.text(rateHeader, cols.rate, y + 1.5);
-  doc.text(amtHeader, cols.amount, y + 1.5, { align: 'right' });
+  const cols = { desc: ml + 2, qty: ml + contentW * 0.52, rate: ml + contentW * 0.67, amount: pageW - mr - 2 };
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(7.5); doc.setTextColor(90, 90, 86);
+  doc.text(d.descLbl, cols.desc, y + 1.5);
+  doc.text(d.qtyLbl,  cols.qty,  y + 1.5);
+  doc.text(d.rateLbl, cols.rate, y + 1.5);
+  doc.text(d.amtLbl,  cols.amount, y + 1.5, { align: 'right' });
   y += 7;
 
-  let subtotal = 0;
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(9);
-
-  lineItems.forEach((item, idx) => {
-    const amt = item.qty * item.price;
-    subtotal += amt;
-
-    if (idx % 2 === 1) {
-      doc.setFillColor(250, 249, 247);
-      doc.rect(ml, y - 3.5, contentW, 7, 'F');
-    }
-
-    doc.setTextColor(12, 11, 10);
-    const descLines = doc.splitTextToSize(item.desc || '—', contentW * 0.48);
-    doc.text(descLines[0], cols.desc, y);
+  // Line items
+  d.rows.forEach((row, i) => {
+    if (i % 2 === 1) { doc.setFillColor(250, 249, 247); doc.rect(ml, y - 3.5, contentW, 7, 'F'); }
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(12, 11, 10);
+    doc.text(doc.splitTextToSize(row.desc, contentW * 0.48)[0], cols.desc, y);
     doc.setTextColor(74, 72, 69);
-    doc.text(String(item.qty), cols.qty, y);
-    doc.text(sym + item.price.toFixed(2), cols.rate, y);
+    doc.text(String(row.qty), cols.qty, y);
+    doc.text(d.sym + row.price.toFixed(2), cols.rate, y);
     doc.setFont('helvetica', 'bold');
-    doc.setTextColor(12, 11, 10);
-    doc.text(sym + amt.toFixed(2), cols.amount, y, { align: 'right' });
+    doc.text(d.sym + row.amt.toFixed(2), cols.amount, y, { align: 'right' });
+    doc.setFont('helvetica', 'normal'); y += 7;
+  });
+
+  // Totals
+  y += 4;
+  doc.setDrawColor(200, 200, 195); doc.setLineWidth(0.3);
+  doc.line(ml + contentW * 0.55, y, pageW - mr, y); y += 5;
+  const totRows = [
+    [d.subLbl, d.sym + d.subtotal.toFixed(2), false],
+    ...(d.gstRate > 0 ? [[`GST (${d.gstRate}%)`, d.sym + d.gstAmt.toFixed(2), false]] : []),
+    [d.totLbl, d.sym + d.total.toFixed(2), true]
+  ];
+  totRows.forEach(([lbl, val, bold]) => {
+    doc.setFont('helvetica', bold ? 'bold' : 'normal');
+    doc.setFontSize(bold ? 10 : 9);
+    doc.setTextColor(bold ? 12 : 74, bold ? 11 : 72, bold ? 10 : 69);
+    if (bold) { doc.setDrawColor(200,200,195); doc.setLineWidth(0.3); doc.line(pageW-mr-52,y-2,pageW-mr,y-2); }
+    doc.text(lbl, pageW - mr - 40, y);
+    doc.text(val, pageW - mr, y, { align: 'right' });
+    y += bold ? 7 : 5;
+  });
+
+  // Bank details
+  if (d.bank) {
+    y += 4;
+    doc.setDrawColor(200, 200, 195); doc.setLineWidth(0.3);
+    doc.line(ml, y, pageW - mr, y); y += 6;
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(30, 107, 71);
+    doc.text(d.bankLbl, ml, y); y += 5;
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor(74, 72, 69);
+    doc.text(doc.splitTextToSize(d.bank, contentW), ml, y);
+    y += doc.splitTextToSize(d.bank, contentW).length * 5;
+  }
+
+  // Notes
+  if (d.notes) {
+    y += 4;
+    doc.setDrawColor(200, 200, 195); doc.setLineWidth(0.3);
+    doc.line(ml, y, pageW - mr, y); y += 6;
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(30, 107, 71);
+    doc.text(d.notesLbl, ml, y); y += 5;
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor(74, 72, 69);
+    doc.text(doc.splitTextToSize(d.notes, contentW), ml, y);
+  }
+
+  // Footer
+  const fY = pageH - 14;
+  doc.setDrawColor(30, 107, 71); doc.setLineWidth(0.4);
+  doc.line(ml, fY - 2, pageW - mr, fY - 2);
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(130, 130, 125);
+  const gstNote = d.gstRate > 0
+    ? `${d.abnLbl} · ABN ${d.abn || '—'} · Tax Invoice per ATO requirements`
+    : `ABN ${d.abn || '—'}`;
+  doc.text(gstNote, ml, fY);
+  doc.text('invoicenow.me', pageW - mr, fY, { align: 'right' });
+
+  doc.save(`Invoice-${d.invNum}-${d.fromName.replace(/\s+/g, '-')}-classic.pdf`);
+  showToast(currentLang === 'zh' ? '✓ PDF 已下载' : '✓ PDF downloaded');
+}
+
+/* ─── Bold PDF ──────────────────────────────────────
+   Dark navy background · amber accent bar + labels    */
+function buildPDF_Bold() {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  const d = getPDFData();
+
+  const pageW = 210, pageH = 297, ml = 18, mr = 18, contentW = 174;
+  let y = 0;
+
+  // Dark backgrounds
+  doc.setFillColor(15, 25, 35);  doc.rect(0, 0, pageW, pageH, 'F');
+  doc.setFillColor(200, 135, 58); doc.rect(0, 0, 5, pageH, 'F');
+  doc.setFillColor(22, 35, 50);  doc.rect(5, 0, pageW - 5, 58, 'F');
+
+  // Header left
+  y = 20;
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(20); doc.setTextColor(240, 237, 232);
+  doc.text(d.fromName, ml + 4, y); y += 5.5;
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(155, 150, 145);
+  if (d.fromDetail) { doc.text(d.fromDetail, ml + 4, y); y += 4.5; }
+  if (d.abn)        { doc.text(`ABN ${d.abn}`, ml + 4, y); }
+
+  // Header right
+  let ry = 14;
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(200, 135, 58);
+  doc.text(d.invLabel, pageW - mr, ry, { align: 'right' }); ry += 6;
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(16); doc.setTextColor(240, 237, 232);
+  doc.text(`#${d.invNum}`, pageW - mr, ry, { align: 'right' }); ry += 6;
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(155, 150, 145);
+  if (d.date)    { doc.text(d.date, pageW - mr, ry, { align: 'right' }); ry += 4.5; }
+  if (d.dueDate) { doc.text(`Due: ${d.dueDate}`, pageW - mr, ry, { align: 'right' }); }
+
+  // Parties
+  y = 60;
+  const halfW = contentW / 2;
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(7); doc.setTextColor(120, 115, 110);
+  doc.text(d.fromLabel, ml + 4, y);
+  doc.text(d.toLabel, ml + 4 + halfW + 4, y); y += 5;
+
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(240, 237, 232);
+  doc.text(d.fromName, ml + 4, y);
+  doc.text(d.toName,   ml + 4 + halfW + 4, y); y += 4.5;
+
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor(155, 150, 145);
+  let ly = y, rry = y;
+  if (d.fromDetail) { doc.text(d.fromDetail, ml + 4, ly); ly += 4.5; }
+  if (d.abn)        { doc.text(`ABN ${d.abn}`, ml + 4, ly); ly += 4.5; }
+  if (d.toDetail)   { doc.text(d.toDetail,   ml + 4 + halfW + 4, rry); rry += 4.5; }
+  if (d.clientAbn)  { doc.text(`ABN ${d.clientAbn}`, ml + 4 + halfW + 4, rry); rry += 4.5; }
+  y = Math.max(ly, rry) + 6;
+
+  // Table header
+  doc.setFillColor(30, 45, 62); doc.rect(5, y - 3, pageW - 5, 8, 'F');
+  const cols = { desc: ml + 4, qty: ml + contentW * 0.52, rate: ml + contentW * 0.67, amount: pageW - mr - 2 };
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(7.5); doc.setTextColor(200, 135, 58);
+  doc.text(d.descLbl, cols.desc, y + 2);
+  doc.text(d.qtyLbl,  cols.qty,  y + 2);
+  doc.text(d.rateLbl, cols.rate, y + 2);
+  doc.text(d.amtLbl,  cols.amount, y + 2, { align: 'right' });
+  y += 8;
+
+  // Line items
+  d.rows.forEach((row, i) => {
+    if (i % 2 === 0) { doc.setFillColor(20, 32, 45); doc.rect(5, y - 3.5, pageW - 5, 7.5, 'F'); }
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(220, 218, 215);
+    doc.text(doc.splitTextToSize(row.desc, contentW * 0.46)[0], cols.desc, y);
+    doc.setTextColor(160, 155, 150);
+    doc.text(String(row.qty), cols.qty, y);
+    doc.text(d.sym + row.price.toFixed(2), cols.rate, y);
+    doc.setFont('helvetica', 'bold'); doc.setTextColor(240, 237, 232);
+    doc.text(d.sym + row.amt.toFixed(2), cols.amount, y, { align: 'right' });
+    doc.setFont('helvetica', 'normal'); y += 7;
+  });
+
+  // Totals
+  y += 4;
+  doc.setDrawColor(200, 135, 58); doc.setLineWidth(0.4);
+  doc.line(pageW - mr - 55, y, pageW - mr, y); y += 5;
+  const totRows = [
+    [d.subLbl, d.sym + d.subtotal.toFixed(2), false],
+    ...(d.gstRate > 0 ? [[`GST (${d.gstRate}%)`, d.sym + d.gstAmt.toFixed(2), false]] : []),
+    [d.totLbl, d.sym + d.total.toFixed(2), true]
+  ];
+  totRows.forEach(([lbl, val, bold]) => {
+    doc.setFont('helvetica', bold ? 'bold' : 'normal');
+    doc.setFontSize(bold ? 11 : 9);
+    doc.setTextColor(...(bold ? [240, 237, 232] : [155, 150, 145]));
+    if (bold) { doc.setDrawColor(80,100,120); doc.setLineWidth(0.3); doc.line(pageW-mr-55,y-2,pageW-mr,y-2); }
+    doc.text(lbl, pageW - mr - 50, y);
+    doc.text(val, pageW - mr, y, { align: 'right' });
+    y += bold ? 7 : 5;
+  });
+
+  // Bank details
+  if (d.bank) {
+    y += 6;
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(200, 135, 58);
+    doc.text(d.bankLbl, ml + 4, y); y += 5;
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor(155, 150, 145);
+    doc.text(doc.splitTextToSize(d.bank, contentW), ml + 4, y);
+    y += doc.splitTextToSize(d.bank, contentW).length * 5;
+  }
+
+  // Notes
+  if (d.notes) {
+    y += 6;
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(200, 135, 58);
+    doc.text(d.notesLbl, ml + 4, y); y += 5;
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor(155, 150, 145);
+    doc.text(doc.splitTextToSize(d.notes, contentW), ml + 4, y);
+  }
+
+  // Footer
+  const fY = pageH - 12;
+  doc.setFillColor(22, 35, 50); doc.rect(5, fY - 5, pageW - 5, 17, 'F');
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(100, 95, 90);
+  const gstNote = d.gstRate > 0
+    ? `${d.abnLbl} · ABN ${d.abn || '—'}`
+    : `ABN ${d.abn || '—'}`;
+  doc.text(gstNote, ml + 4, fY);
+  doc.text('invoicenow.me', pageW - mr, fY, { align: 'right' });
+
+  doc.save(`Invoice-${d.invNum}-${d.fromName.replace(/\s+/g, '-')}-bold.pdf`);
+  showToast(currentLang === 'zh' ? '✓ PDF 已下载' : '✓ PDF downloaded');
+}
+
+/* ─── Minimal PDF ───────────────────────────────────
+   Pure white · bold black typography · no colour      */
+function buildPDF_Minimal() {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  const d = getPDFData();
+
+  const pageW = 210, pageH = 297, ml = 18, mr = 18, contentW = 174;
+  let y = 22;
+
+  // Business name top-left
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(22); doc.setTextColor(12, 11, 10);
+  doc.text(d.fromName, ml, y); y += 6;
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(100, 100, 95);
+  if (d.fromDetail) { doc.text(d.fromDetail, ml, y); y += 4.5; }
+  if (d.abn)        { doc.text(`ABN ${d.abn}`, ml, y); y += 4.5; }
+
+  // Invoice block top-right
+  let ry = 22;
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(130, 128, 126);
+  doc.text(d.invLabel.toUpperCase(), pageW - mr, ry, { align: 'right' }); ry += 6;
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(16); doc.setTextColor(12, 11, 10);
+  doc.text(`#${d.invNum}`, pageW - mr, ry, { align: 'right' }); ry += 6;
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(100, 100, 95);
+  if (d.date)    { doc.text(d.date,           pageW - mr, ry, { align: 'right' }); ry += 4.5; }
+  if (d.dueDate) { doc.text(`Due: ${d.dueDate}`, pageW - mr, ry, { align: 'right' }); }
+
+  // Heavy divider
+  y = Math.max(y, ry) + 6;
+  doc.setDrawColor(12, 11, 10); doc.setLineWidth(1.2);
+  doc.line(ml, y, pageW - mr, y); y += 8;
+
+  // Parties
+  const halfW = contentW / 2;
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(7.5); doc.setTextColor(130, 128, 126);
+  doc.text(d.fromLabel.toUpperCase(), ml, y);
+  doc.text(d.toLabel.toUpperCase(), ml + halfW + 4, y); y += 5;
+
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(12, 11, 10);
+  doc.text(d.fromName, ml, y);
+  doc.text(d.toName,   ml + halfW + 4, y); y += 4.5;
+
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor(90, 88, 86);
+  let ly = y, rry = y;
+  if (d.fromDetail) { doc.text(d.fromDetail, ml, ly); ly += 4.5; }
+  if (d.abn)        { doc.text(`ABN ${d.abn}`, ml, ly); ly += 4.5; }
+  if (d.toDetail)   { doc.text(d.toDetail,   ml + halfW + 4, rry); rry += 4.5; }
+  if (d.clientAbn)  { doc.text(`ABN ${d.clientAbn}`, ml + halfW + 4, rry); rry += 4.5; }
+  y = Math.max(ly, rry) + 6;
+
+  // Thin divider before table
+  doc.setDrawColor(180, 178, 175); doc.setLineWidth(0.4);
+  doc.line(ml, y, pageW - mr, y); y += 8;
+
+  // Table header
+  const cols = { desc: ml, qty: ml + contentW * 0.52, rate: ml + contentW * 0.67, amount: pageW - mr };
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(7.5); doc.setTextColor(12, 11, 10);
+  doc.text(d.descLbl, cols.desc, y);
+  doc.text(d.qtyLbl,  cols.qty,  y);
+  doc.text(d.rateLbl, cols.rate, y);
+  doc.text(d.amtLbl,  cols.amount, y, { align: 'right' });
+  y += 2;
+  doc.setDrawColor(12, 11, 10); doc.setLineWidth(1.2);
+  doc.line(ml, y, pageW - mr, y); y += 6;
+
+  // Line items
+  d.rows.forEach(row => {
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(12, 11, 10);
+    doc.text(doc.splitTextToSize(row.desc, contentW * 0.48)[0], cols.desc, y);
+    doc.setTextColor(80, 78, 76);
+    doc.text(String(row.qty), cols.qty, y);
+    doc.text(d.sym + row.price.toFixed(2), cols.rate, y);
+    doc.setFont('helvetica', 'bold'); doc.setTextColor(12, 11, 10);
+    doc.text(d.sym + row.amt.toFixed(2), cols.amount, y, { align: 'right' });
     doc.setFont('helvetica', 'normal');
+    doc.setDrawColor(220, 218, 216); doc.setLineWidth(0.25);
+    doc.line(ml, y + 2.5, pageW - mr, y + 2.5);
     y += 7;
   });
 
   // Totals
   y += 4;
-  doc.setDrawColor(200, 200, 195);
-  doc.line(ml + contentW * 0.55, y, pageW - mr, y);
-  y += 5;
-
-  function totRow(label, val, bold) {
+  const totRows = [
+    [d.subLbl, d.sym + d.subtotal.toFixed(2), false],
+    ...(d.gstRate > 0 ? [[`GST (${d.gstRate}%)`, d.sym + d.gstAmt.toFixed(2), false]] : []),
+    [d.totLbl, d.sym + d.total.toFixed(2), true]
+  ];
+  totRows.forEach(([lbl, val, bold]) => {
     doc.setFont('helvetica', bold ? 'bold' : 'normal');
-    doc.setFontSize(bold ? 10 : 9);
-    doc.setTextColor(bold ? 12 : 74, bold ? 11 : 72, bold ? 10 : 69);
-    doc.text(label, pageW - mr - 40, y);
+    doc.setFontSize(bold ? 11 : 9);
+    doc.setTextColor(bold ? 12 : 100, bold ? 11 : 100, bold ? 10 : 95);
+    if (bold) { doc.setDrawColor(12,11,10); doc.setLineWidth(1.2); doc.line(pageW-mr-52,y-2,pageW-mr,y-2); }
+    doc.text(lbl, pageW - mr - 50, y);
     doc.text(val, pageW - mr, y, { align: 'right' });
-    y += bold ? 6 : 5;
-  }
+    y += bold ? 7 : 5;
+  });
 
-  const gstAmt = subtotal * gstRate / 100;
-  const total = subtotal + gstAmt;
-
-  const subLbl = currentLang === 'zh' ? '小计' : 'Subtotal';
-  const gstLbl = `GST (${gstRate}%)`;
-  const totLbl = currentLang === 'zh' ? `总计 ${curr}` : `Total ${curr}`;
-
-  totRow(subLbl, sym + subtotal.toFixed(2), false);
-  if (gstRate > 0) totRow(gstLbl, sym + gstAmt.toFixed(2), false);
-  doc.setDrawColor(200, 200, 195);
-  doc.line(pageW - mr - 50, y, pageW - mr, y);
-  y += 2;
-  totRow(totLbl, sym + total.toFixed(2), true);
-
-  // Bank Details block
-  if (bank) {
-    y += 8;
-    doc.setDrawColor(200, 200, 195);
-    doc.line(ml, y, pageW - mr, y);
+  // Bank details
+  if (d.bank) {
     y += 6;
-    const bankLabel = currentLang === 'zh' ? '银行账号' : 'Bank Details';
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(8);
-    doc.setTextColor(30, 107, 71);
-    doc.text(bankLabel, ml, y);
-    y += 4;
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(8.5);
-    doc.setTextColor(74, 72, 69);
-    const bankLines = doc.splitTextToSize(bank, contentW);
-    doc.text(bankLines, ml, y);
-    y += bankLines.length * 4.5;
+    doc.setDrawColor(180, 178, 175); doc.setLineWidth(0.3);
+    doc.line(ml, y - 4, pageW - mr, y - 4);
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(80, 78, 76);
+    doc.text(d.bankLbl, ml, y); y += 5;
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor(80, 78, 76);
+    doc.text(doc.splitTextToSize(d.bank, contentW), ml, y);
+    y += doc.splitTextToSize(d.bank, contentW).length * 5;
   }
 
-  // Notes block
-  if (notes) {
-    y += bank ? 4 : 8;
-    if (!bank) {
-      doc.setDrawColor(200, 200, 195);
-      doc.line(ml, y, pageW - mr, y);
-      y += 6;
-    }
-    const notesLabel = currentLang === 'zh' ? '备注：' : 'Notes:';
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(8);
-    doc.setTextColor(100, 100, 95);
-    doc.text(notesLabel, ml, y);
-    y += 4;
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(8.5);
-    doc.setTextColor(74, 72, 69);
-    const notesLines = doc.splitTextToSize(notes, contentW);
-    doc.text(notesLines, ml, y);
+  // Notes
+  if (d.notes) {
+    y += 6;
+    doc.setDrawColor(180, 178, 175); doc.setLineWidth(0.3);
+    doc.line(ml, y - 4, pageW - mr, y - 4);
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(80, 78, 76);
+    doc.text(d.notesLbl, ml, y); y += 5;
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor(80, 78, 76);
+    doc.text(doc.splitTextToSize(d.notes, contentW), ml, y);
   }
 
   // Footer
-  const footerY = pageH - 14;
-  doc.setDrawColor(30, 107, 71);
-  doc.setLineWidth(0.4);
-  doc.line(ml, footerY - 2, pageW - mr, footerY - 2);
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(7.5);
-  doc.setTextColor(130, 130, 125);
-  const gstNote = gstRate > 0
-    ? (currentLang === 'zh' ? `GST 已注册 · ABN ${abn || '—'}` : `GST Registered · ABN ${abn || '—'} · Tax Invoice per ATO requirements`)
-    : (currentLang === 'zh' ? `ABN ${abn || '—'}` : `ABN ${abn || '—'} · invoicenow.me`);
-  doc.text(gstNote, ml, footerY);
-  doc.text('invoicenow.me', pageW - mr, footerY, { align: 'right' });
+  const fY = pageH - 14;
+  doc.setDrawColor(12, 11, 10); doc.setLineWidth(0.8);
+  doc.line(ml, fY - 3, pageW - mr, fY - 3);
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(130, 128, 125);
+  const gstNote = d.gstRate > 0
+    ? `${d.abnLbl} · ABN ${d.abn || '—'}`
+    : `ABN ${d.abn || '—'}`;
+  doc.text(gstNote, ml, fY);
+  doc.text('invoicenow.me', pageW - mr, fY, { align: 'right' });
 
-  // Save
-  const filename = `Invoice-${invNum || 'draft'}-${fromName.replace(/\s+/g,'-')}-classic.pdf`;
-  doc.save(filename);
+  doc.save(`Invoice-${d.invNum}-${d.fromName.replace(/\s+/g, '-')}-minimal.pdf`);
   showToast(currentLang === 'zh' ? '✓ PDF 已下载' : '✓ PDF downloaded');
 }
 
-/* ── Bold PDF (dark navy + amber accent) ─────────── */
-function buildPDF_Bold() {
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-  const curr = getCurr(), gstRate = getGST(), sym = getSym();
-  const fromName = document.getElementById('f-fromname').value || 'Your Business';
-  const fromDetail = document.getElementById('f-fromdetail').value || '';
-  const toName = document.getElementById('f-toname').value || 'Client';
-  const toDetail = document.getElementById('f-todetail').value || '';
-  const invNum = document.getElementById('f-invnum').value || '';
-  const abn = document.getElementById('f-abn').value || '';
-  const notes = document.getElementById('f-notes').value || '';
-  const dateVal = document.getElementById('f-date').value;
-  const dueDateVal = document.getElementById('f-duedate').value;
-  function fmtDate(v) { if (!v) return ''; return new Date(v+'T00:00:00').toLocaleDateString('en-AU',{day:'2-digit',month:'short',year:'numeric'}); }
-  const pageW=210, pageH=297, ml=18, mr=18, contentW=174;
-  let y=0;
 
-  // Dark bg + amber sidebar
-  doc.setFillColor(15,25,35); doc.rect(0,0,pageW,pageH,'F');
-  doc.setFillColor(200,135,58); doc.rect(0,0,5,pageH,'F');
-  doc.setFillColor(22,35,50); doc.rect(5,0,pageW-5,54,'F');
-
-  y=22;
-  doc.setFont('helvetica','bold'); doc.setFontSize(20); doc.setTextColor(240,237,232);
-  doc.text(fromName, ml+4, y);
-  doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(200,135,58);
-  const invLbl = currentLang==='zh'?'税务发票':'TAX INVOICE';
-  doc.text(invLbl, pageW-mr, y, {align:'right'});
-  y+=5;
-  doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(155,150,145);
-  if (fromDetail) doc.text(fromDetail, ml+4, y);
-  doc.setTextColor(200,200,195);
-  doc.text('#'+invNum, pageW-mr, y, {align:'right'});
-  y+=4;
-  if (abn) { doc.setFontSize(8); doc.setTextColor(130,125,120); doc.text(`ABN ${abn}`, ml+4, y); }
-  const dStr=fmtDate(dateVal), ddStr=fmtDate(dueDateVal);
-  if (dStr) { doc.setTextColor(140,135,130); doc.text(dStr, pageW-mr, y, {align:'right'}); y+=4; }
-  if (ddStr) { doc.setFontSize(8.5); doc.text(`Due: ${ddStr}`, pageW-mr, y, {align:'right'}); }
-
-  y=60;
-  const halfW=contentW/2;
-  doc.setFont('helvetica','bold'); doc.setFontSize(7); doc.setTextColor(120,115,110);
-  doc.text(currentLang==='zh'?'发票方':'FROM', ml+4, y);
-  doc.text(currentLang==='zh'?'收款方':'BILL TO', ml+4+halfW+4, y);
-  y+=5;
-  doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(240,237,232);
-  doc.text(fromName, ml+4, y); doc.text(toName, ml+4+halfW+4, y);
-  y+=4.5;
-  doc.setFont('helvetica','normal'); doc.setFontSize(8.5); doc.setTextColor(155,150,145);
-  if (fromDetail) doc.text(fromDetail, ml+4, y);
-  if (toDetail) doc.text(toDetail, ml+4+halfW+4, y);
-  y+=12;
-
-  // Table header
-  doc.setFillColor(30,45,62); doc.rect(5,y-3,pageW-5,8,'F');
-  const cols={desc:ml+4, qty:ml+contentW*0.52, rate:ml+contentW*0.67, amount:pageW-mr-2};
-  doc.setFont('helvetica','bold'); doc.setFontSize(7.5); doc.setTextColor(200,135,58);
-  doc.text(currentLang==='zh'?'描述':'DESCRIPTION', cols.desc, y+2);
-  doc.text(currentLang==='zh'?'数量':'QTY', cols.qty, y+2);
-  doc.text(currentLang==='zh'?'单价':'RATE', cols.rate, y+2);
-  doc.text(currentLang==='zh'?'金额':'AMOUNT', cols.amount, y+2, {align:'right'});
-  y+=8;
-
-  let subtotal=0;
-  doc.setFont('helvetica','normal'); doc.setFontSize(9);
-  lineItems.forEach((item,idx)=>{
-    const amt=item.qty*item.price; subtotal+=amt;
-    if (idx%2===0) { doc.setFillColor(20,32,45); doc.rect(5,y-3.5,pageW-5,7.5,'F'); }
-    doc.setTextColor(220,218,215);
-    doc.text(doc.splitTextToSize(item.desc||'—',contentW*0.46)[0], cols.desc, y);
-    doc.setTextColor(160,155,150);
-    doc.text(String(item.qty),cols.qty,y); doc.text(sym+item.price.toFixed(2),cols.rate,y);
-    doc.setFont('helvetica','bold'); doc.setTextColor(240,237,232);
-    doc.text(sym+amt.toFixed(2),cols.amount,y,{align:'right'});
-    doc.setFont('helvetica','normal'); y+=7;
-  });
-
-  y+=4;
-  doc.setDrawColor(200,135,58); doc.setLineWidth(0.4);
-  doc.line(pageW-mr-55,y,pageW-mr,y); y+=5;
-  const gstAmt=subtotal*gstRate/100, total=subtotal+gstAmt;
-  doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(155,150,145);
-  doc.text(currentLang==='zh'?'小计':'Subtotal',pageW-mr-45,y);
-  doc.text(sym+subtotal.toFixed(2),pageW-mr,y,{align:'right'}); y+=5;
-  if (gstRate>0) { doc.text(`GST (${gstRate}%)`,pageW-mr-45,y); doc.text(sym+gstAmt.toFixed(2),pageW-mr,y,{align:'right'}); y+=5; }
-  doc.setDrawColor(80,100,120); doc.setLineWidth(0.3);
-  doc.line(pageW-mr-55,y,pageW-mr,y); y+=3;
-  doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(240,237,232);
-  doc.text(currentLang==='zh'?`总计 ${curr}`:`Total ${curr}`,pageW-mr-50,y+4);
-  doc.text(sym+total.toFixed(2),pageW-mr,y+4,{align:'right'});
-
-  if (notes) {
-    y+=14;
-    doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(200,135,58);
-    doc.text(currentLang==='zh'?'备注：':'Notes:', ml+4, y); y+=5;
-    doc.setFont('helvetica','normal'); doc.setFontSize(8.5); doc.setTextColor(155,150,145);
-    doc.text(doc.splitTextToSize(notes,contentW), ml+4, y);
-  }
-
-  const fY=pageH-12;
-  doc.setFillColor(22,35,50); doc.rect(5,fY-5,pageW-5,17,'F');
-  doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(100,95,90);
-  const gN=gstRate>0?(currentLang==='zh'?`GST已注册 · ABN ${abn||'—'}`:`GST Registered · ABN ${abn||'—'}`):`ABN ${abn||'—'}`;
-  doc.text(gN, ml+4, fY); doc.text('invoicenow.me', pageW-mr, fY, {align:'right'});
-
-  doc.save(`Invoice-${invNum||'draft'}-${fromName.replace(/\s+/g,'-')}-bold.pdf`);
-  showToast(currentLang==='zh'?'✓ PDF 已下载':'✓ PDF downloaded');
-}
-
-/* ── Minimal PDF (stark black & white) ──────────── */
-function buildPDF_Minimal() {
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-  const curr = getCurr(), gstRate = getGST(), sym = getSym();
-  const fromName = document.getElementById('f-fromname').value || 'Your Business';
-  const fromDetail = document.getElementById('f-fromdetail').value || '';
-  const toName = document.getElementById('f-toname').value || 'Client';
-  const toDetail = document.getElementById('f-todetail').value || '';
-  const invNum = document.getElementById('f-invnum').value || '';
-  const abn = document.getElementById('f-abn').value || '';
-  const notes = document.getElementById('f-notes').value || '';
-  const dateVal = document.getElementById('f-date').value;
-  const dueDateVal = document.getElementById('f-duedate').value;
-  function fmtDate(v) { if (!v) return ''; return new Date(v+'T00:00:00').toLocaleDateString('en-AU',{day:'2-digit',month:'short',year:'numeric'}); }
-  const pageW=210, pageH=297, ml=18, mr=18, contentW=174;
-  let y=24;
-
-  // Big brand
-  doc.setFont('helvetica','bold'); doc.setFontSize(24); doc.setTextColor(12,11,10);
-  doc.text(fromName, ml, y);
-  y+=7;
-  doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(100,100,95);
-  if (fromDetail) doc.text(fromDetail, ml, y);
-  if (abn) { y+=4.5; doc.text(`ABN ${abn}`, ml, y); }
-
-  // Right block
-  const hY=24;
-  doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(12,11,10);
-  doc.text(currentLang==='zh'?'税务发票':'TAX INVOICE', pageW-mr, hY, {align:'right'});
-  doc.setFont('helvetica','normal'); doc.setFontSize(11); doc.setTextColor(12,11,10);
-  doc.text('#'+invNum, pageW-mr, hY+7, {align:'right'});
-  doc.setFontSize(8.5); doc.setTextColor(120,118,115);
-  const dStr=fmtDate(dateVal), ddStr=fmtDate(dueDateVal);
-  if (dStr) doc.text(dStr, pageW-mr, hY+13, {align:'right'});
-  if (ddStr) doc.text(`Due: ${ddStr}`, pageW-mr, hY+19, {align:'right'});
-
-  // Bold divider
-  y=46;
-  doc.setDrawColor(12,11,10); doc.setLineWidth(1.5);
-  doc.line(ml,y,pageW-mr,y); y+=10;
-
-  // Parties
-  const halfW=contentW/2;
-  doc.setFont('helvetica','bold'); doc.setFontSize(7.5); doc.setTextColor(130,128,125);
-  doc.text(currentLang==='zh'?'发票方':'FROM', ml, y);
-  doc.text(currentLang==='zh'?'收款方':'BILL TO', ml+halfW+4, y); y+=5;
-  doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(12,11,10);
-  doc.text(fromName, ml, y); doc.text(toName, ml+halfW+4, y); y+=4.5;
-  doc.setFont('helvetica','normal'); doc.setFontSize(8.5); doc.setTextColor(90,88,86);
-  if (fromDetail) doc.text(fromDetail, ml, y);
-  if (toDetail) doc.text(toDetail, ml+halfW+4, y);
-  y+=12;
-
-  // Thin divider
-  doc.setDrawColor(180,178,175); doc.setLineWidth(0.4);
-  doc.line(ml,y,pageW-mr,y); y+=8;
-
-  // Table
-  const cols={desc:ml, qty:ml+contentW*0.52, rate:ml+contentW*0.67, amount:pageW-mr};
-  doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(12,11,10);
-  doc.text(currentLang==='zh'?'描述':'Description', cols.desc, y);
-  doc.text(currentLang==='zh'?'数量':'Qty', cols.qty, y);
-  doc.text(currentLang==='zh'?'单价':'Rate', cols.rate, y);
-  doc.text(currentLang==='zh'?'金额':'Amount', cols.amount, y, {align:'right'});
-  y+=3;
-  doc.setDrawColor(12,11,10); doc.setLineWidth(0.8);
-  doc.line(ml,y,pageW-mr,y); y+=7;
-
-  let subtotal=0;
-  doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(12,11,10);
-  lineItems.forEach(item=>{
-    const amt=item.qty*item.price; subtotal+=amt;
-    doc.text(doc.splitTextToSize(item.desc||'—',contentW*0.46)[0], cols.desc, y);
-    doc.setTextColor(80,78,76);
-    doc.text(String(item.qty),cols.qty,y); doc.text(sym+item.price.toFixed(2),cols.rate,y);
-    doc.setFont('helvetica','bold'); doc.setTextColor(12,11,10);
-    doc.text(sym+amt.toFixed(2),cols.amount,y,{align:'right'});
-    doc.setFont('helvetica','normal'); doc.setTextColor(12,11,10);
-    y+=7;
-    doc.setDrawColor(210,208,205); doc.setLineWidth(0.3);
-    doc.line(ml,y-2,pageW-mr,y-2);
-  });
-
-  y+=5;
-  const gstAmt=subtotal*gstRate/100, total=subtotal+gstAmt;
-  doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(100,98,95);
-  doc.text(currentLang==='zh'?'小计':'Subtotal',pageW-mr-42,y);
-  doc.text(sym+subtotal.toFixed(2),pageW-mr,y,{align:'right'}); y+=5;
-  if (gstRate>0) {
-    doc.text(`GST (${gstRate}%)`,pageW-mr-42,y);
-    doc.text(sym+gstAmt.toFixed(2),pageW-mr,y,{align:'right'}); y+=5;
-  }
-  doc.setDrawColor(12,11,10); doc.setLineWidth(1.2);
-  doc.line(pageW-mr-52,y,pageW-mr,y); y+=5;
-  doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(12,11,10);
-  doc.text(currentLang==='zh'?`总计 ${curr}`:`Total ${curr}`,pageW-mr-50,y);
-  doc.text(sym+total.toFixed(2),pageW-mr,y,{align:'right'});
-
-  if (notes) {
-    y+=14;
-    doc.setDrawColor(180,178,175); doc.setLineWidth(0.3);
-    doc.line(ml,y-4,pageW-mr,y-4);
-    doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(120,118,115);
-    doc.text(currentLang==='zh'?'备注：':'Notes:', ml, y); y+=5;
-    doc.setFont('helvetica','normal'); doc.setFontSize(8.5); doc.setTextColor(80,78,76);
-    doc.text(doc.splitTextToSize(notes,contentW), ml, y);
-  }
-
-  const fY=pageH-14;
-  doc.setDrawColor(12,11,10); doc.setLineWidth(0.8);
-  doc.line(ml,fY-3,pageW-mr,fY-3);
-  doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(130,128,125);
-  const gN=gstRate>0?(currentLang==='zh'?`GST已注册 · ABN ${abn||'—'}`:`GST Registered · ABN ${abn||'—'}`):`ABN ${abn||'—'}`;
-  doc.text(gN, ml, fY); doc.text('invoicenow.me', pageW-mr, fY, {align:'right'});
-
-  doc.save(`Invoice-${invNum||'draft'}-${fromName.replace(/\s+/g,'-')}-minimal.pdf`);
-  showToast(currentLang==='zh'?'✓ PDF 已下载':'✓ PDF downloaded');
-}
 
 // ─── Template state ───────────────────────────────
 let currentTemplate = 'classic';
